@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IoT Network Designer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #0e0f11;
+  --bg2: #15171a;
+  --bg3: #1c1f24;
+  --border: #2a2d33;
+  --border2: #383c44;
+  --text: #e8eaf0;
+  --text2: #8b909e;
+  --text3: #555a66;
+  --accent: #4af0a0;
+  --accent2: #2dd480;
+  --warn: #f0a04a;
+  --info: #4a9ef0;
+  --danger: #f04a6a;
+  --tag-std: #1a2a1a;
+  --tag-std-t: #4af0a0;
+  --tag-eco: #1a1f2a;
+  --tag-eco-t: #4a9ef0;
+  --tag-ven: #2a1f1a;
+  --tag-ven-t: #f0a04a;
+  --tag-fw: #231a2a;
+  --tag-fw-t: #c04af0;
+  --radius: 8px;
+  --radius-lg: 14px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── HEADER ── */
+header {
+  border-bottom: 1px solid var(--border);
+  padding: 18px 32px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 100;
+}
+header h1 {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+header span {
+  font-size: 12px;
+  color: var(--text3);
+  font-family: 'IBM Plex Mono', monospace;
+}
+.header-note {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text3);
+  font-style: italic;
+}
+
+/* ── LAYOUT ── */
+.main { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 57px); }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  overflow-y: auto;
+  background: var(--bg2);
+}
+
+.section-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text3);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* Scenario cards */
+.scenario-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.scenario-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 10px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.scenario-card:hover { border-color: var(--border2); background: #1e2228; }
+.scenario-card.active { border-color: var(--accent); background: #0e1f17; }
+.scenario-card .icon { font-size: 18px; margin-bottom: 4px; }
+.scenario-card .name { font-size: 11px; font-weight: 500; color: var(--text); line-height: 1.3; }
+.scenario-card.active .name { color: var(--accent); }
+
+/* Sliders */
+.slider-group { display: flex; flex-direction: column; gap: 14px; }
+.slider-row { display: flex; flex-direction: column; gap: 5px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; }
+.slider-label { font-size: 12px; color: var(--text2); }
+.slider-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  min-width: 80px;
+  text-align: right;
+}
+input[type=range] {
+  width: 100%;
+  height: 3px;
+  -webkit-appearance: none;
+  background: var(--border2);
+  border-radius: 2px;
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+/* Toggle checkboxes */
+.toggle-group { display: flex; flex-direction: column; gap: 8px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; }
+.toggle-label { font-size: 12px; color: var(--text2); }
+.toggle {
+  position: relative; width: 32px; height: 17px;
+  background: var(--border2); border-radius: 9px; cursor: pointer;
+  transition: background 0.2s; flex-shrink: 0;
+}
+.toggle.on { background: var(--accent2); }
+.toggle::after {
+  content: ''; position: absolute;
+  top: 2px; left: 2px;
+  width: 13px; height: 13px;
+  border-radius: 50%; background: var(--bg);
+  transition: transform 0.2s;
+}
+.toggle.on::after { transform: translateX(15px); }
+
+/* ── MAIN CONTENT ── */
+.content { padding: 24px 28px; overflow-y: auto; }
+
+/* Result count bar */
+.result-bar {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.result-count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px; color: var(--text2);
+}
+.result-count span { color: var(--accent); font-weight: 500; }
+.cat-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.cat-pill {
+  font-size: 11px; padding: 3px 10px;
+  border-radius: 20px; cursor: pointer;
+  border: 1px solid var(--border2);
+  color: var(--text3); background: transparent;
+  transition: all 0.12s;
+}
+.cat-pill:hover { color: var(--text2); border-color: var(--text3); }
+.cat-pill.active { color: var(--text); border-color: var(--text2); background: var(--bg3); }
+
+/* Compare bar */
+.compare-bar {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 12px;
+  display: none;
+}
+.compare-bar.visible { display: flex; }
+.compare-bar-label { font-size: 12px; color: var(--text2); }
+.compare-chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+.chip {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 20px; padding: 3px 10px;
+  font-size: 11px; color: var(--text);
+  display: flex; align-items: center; gap: 5px;
+}
+.chip-x { cursor: pointer; color: var(--text3); font-size: 13px; line-height: 1; }
+.chip-x:hover { color: var(--danger); }
+.compare-btn {
+  padding: 6px 14px; border-radius: var(--radius);
+  background: var(--accent); color: var(--bg);
+  border: none; cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  transition: opacity 0.15s;
+}
+.compare-btn:hover { opacity: 0.85; }
+.compare-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* Tech table */
+.tech-table { width: 100%; border-collapse: collapse; }
+.tech-table th {
+  text-align: left; padding: 8px 10px;
+  font-size: 10px; font-weight: 500;
+  color: var(--text3); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.tech-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  font-size: 12px;
+}
+.tech-table tr:hover td { background: var(--bg3); }
+.tech-table tr.dimmed td { opacity: 0.3; }
+.tech-table tr.highlighted td { background: #0e1f17; }
+
+.tech-name { font-weight: 500; font-size: 13px; color: var(--text); }
+.tech-spec { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+.badge-new { font-size: 9px; background: #0e1a2a; color: var(--info); padding: 1px 5px; border-radius: 8px; margin-left: 5px; vertical-align: middle; }
+.badge-err { font-size: 9px; background: #2a1a0e; color: var(--warn); padding: 1px 5px; border-radius: 8px; margin-left: 5px; vertical-align: middle; }
+
+/* Type tags */
+.type-tag {
+  font-size: 10px; padding: 2px 7px; border-radius: 10px;
+  font-weight: 500; white-space: nowrap;
+}
+.type-standard { background: var(--tag-std); color: var(--tag-std-t); }
+.type-ecosystem { background: var(--tag-eco); color: var(--tag-eco-t); }
+.type-vendor { background: var(--tag-ven); color: var(--tag-ven-t); }
+.type-framework { background: var(--tag-fw); color: var(--tag-fw-t); }
+
+/* Cat tags */
+.cat-tag {
+  font-size: 10px; padding: 2px 7px; border-radius: 10px;
+  font-weight: 500; white-space: nowrap; display: inline-block;
+}
+.cat-short { background:#0e1f17; color:#4af0a0; }
+.cat-medium { background:#0e1424; color:#4a9ef0; }
+.cat-lpwan { background:#231a0e; color:#f0a04a; }
+.cat-wifi { background:#0e1824; color:#6ab4f5; }
+.cat-cellular { background:#1f0e17; color:#f04ab4; }
+.cat-ntn { background:#0e1e0e; color:#80f080; }
+.cat-industrial { background:#1e1e0e; color:#f0e04a; }
+
+/* Stars */
+.stars { color: var(--warn); letter-spacing: -1px; font-size: 12px; }
+
+/* KPI pills */
+.kpi { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text2); }
+.kpi-defining { color: var(--accent); font-weight: 500; }
+
+/* Note */
+.note { font-size: 10px; color: var(--text3); margin-top: 3px; font-style: italic; }
+.note.warn { color: var(--warn); }
+
+/* Checkbox col */
+.check-col { width: 28px; }
+input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+
+/* ── COMPARISON PANEL ── */
+.compare-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-top: 24px;
+  display: none;
+}
+.compare-panel.visible { display: block; }
+.compare-panel h2 {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px; font-weight: 500;
+  color: var(--text2); margin-bottom: 18px;
+  letter-spacing: 0.05em;
+}
+.compare-grid {
+  display: grid;
+  gap: 16px;
+}
+.compare-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+.compare-card.best { border-color: var(--accent); background: #0c1c14; }
+.compare-card-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 8px;
+  margin-bottom: 14px;
+}
+.compare-card-name { font-size: 15px; font-weight: 500; }
+.compare-card.best .compare-card-name { color: var(--accent); }
+.best-badge {
+  font-size: 10px; background: var(--accent); color: var(--bg);
+  padding: 2px 8px; border-radius: 10px; font-weight: 500;
+  white-space: nowrap; flex-shrink: 0;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.compare-rows { display: flex; flex-direction: column; gap: 8px; }
+.compare-row {
+  display: flex; gap: 8px;
+  font-size: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.compare-row:last-child { border-bottom: none; padding-bottom: 0; }
+.compare-row-label { color: var(--text3); width: 110px; flex-shrink: 0; font-size: 11px; }
+.compare-row-val { color: var(--text); }
+.fit-bar { display: flex; gap: 3px; align-items: center; }
+.fit-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--border2);
+}
+.fit-dot.on { background: var(--accent); }
+.fit-score-text { margin-left: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text3); }
+.eliminations {
+  background: #1a1206;
+  border: 1px solid #3a2a0e;
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--warn);
+}
+.eliminations strong { display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: 0.05em; font-family: 'IBM Plex Mono', monospace; }
+.elim-item { margin-bottom: 3px; padding-left: 12px; position: relative; }
+.elim-item::before { content: '×'; position: absolute; left: 0; color: var(--danger); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IoT Network Designer</h1>
+  <span>v0.1 — comparison tool</span>
+  <div class="header-note">Curated comparison with assumptions — not a design authority</div>
+</header>
+
+<div class="main">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <div>
+      <div class="section-label">Scenario preset</div>
+      <div class="scenario-grid" id="scenarios"></div>
+    </div>
+
+    <div>
+      <div class="section-label">Requirements</div>
+      <div class="slider-group">
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label">Latency requirement</span>
+            <span class="slider-val" id="val-latency">best effort</span>
+          </div>
+          <input type="range" id="sl-latency" min="0" max="4" step="1" value="4">
+        </div>
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label">Coverage / range</span>
+            <span class="slider-val" id="val-range">any</span>
+          </div>
+          <input type="range" id="sl-range" min="0" max="5" step="1" value="0">
+        </div>
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label">Number of devices</span>
+            <span class="slider-val" id="val-devices">any</span>
+          </div>
+          <input type="range" id="sl-devices" min="0" max="5" step="1" value="0">
+        </div>
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label">Data rate needed</span>
+            <span class="slider-val" id="val-datarate">any</span>
+          </div>
+          <input type="range" id="sl-datarate" min="0" max="4" step="1" value="0">
+        </div>
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label">Budget / complexity</span>
+            <span class="slider-val" id="val-budget">any</span>
+          </div>
+          <input type="range" id="sl-budget" min="0" max="2" step="1" value="0">
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Constraints</div>
+      <div class="toggle-group">
+        <div class="toggle-row">
+          <span class="toggle-label">Battery-powered devices</span>
+          <div class="toggle" id="tg-battery" onclick="toggleConstraint('battery')"></div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">No cellular operator</span>
+          <div class="toggle" id="tg-noop" onclick="toggleConstraint('noop')"></div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Mobile / moving devices</span>
+          <div class="toggle" id="tg-mobile" onclick="toggleConstraint('mobile')"></div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Private / no cloud</span>
+          <div class="toggle" id="tg-private" onclick="toggleConstraint('private')"></div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Outdoor / harsh environment</span>
+          <div class="toggle" id="tg-outdoor" onclick="toggleConstraint('outdoor')"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Category filter</div>
+      <div style="display:flex;flex-direction:column;gap:5px;" id="sidebar-cats"></div>
+    </div>
+
+  </aside>
+
+  <!-- MAIN -->
+  <main class="content">
+    <div class="result-bar">
+      <div class="result-count">Showing <span id="count">—</span> technologies</div>
+      <div class="cat-filters" id="cat-filters-top"></div>
+    </div>
+
+    <div class="compare-bar" id="compare-bar">
+      <span class="compare-bar-label">Compare:</span>
+      <div class="compare-chips" id="compare-chips"></div>
+      <button class="compare-btn" id="compare-btn" onclick="runCompare()">Compare →</button>
+    </div>
+
+    <table class="tech-table" id="tech-table">
+      <thead>
+        <tr>
+          <th class="check-col"></th>
+          <th>Technology</th>
+          <th>Type</th>
+          <th>Category</th>
+          <th>Range</th>
+          <th>Key KPI</th>
+          <th>Spectrum</th>
+          <th>Battery</th>
+          <th>Topology</th>
+          <th>Primary use</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <div class="compare-panel" id="compare-panel">
+      <h2>Side-by-side comparison</h2>
+      <div class="compare-grid" id="compare-grid"></div>
+      <div class="eliminations" id="eliminations" style="display:none"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const TECHS = [
+  // SHORT RANGE
+  {id:'rfid',name:'RFID (LF/HF/UHF)',type:'standard',cat:'short',range_km:0.005,latency_max:4,devices_max:4,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'cm – few m',kpi:'Passive: zero battery, cm–m range',kpi_class:'',spec:'130kHz/13.56MHz/900MHz, ASK/FSK',topo:'Point-to-point reader-tag',use:'Anti-theft, access control, inventory',
+   note:''},
+  {id:'nfc',name:'NFC',type:'standard',cat:'short',range_km:0.0002,latency_max:4,devices_max:2,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:false,licensed:false,
+   range_s:'< a few cm (typically <10 cm)',kpi:'≤ 424 kbps, bidirectional',kpi_class:'',spec:'13.56 MHz ISM, ASK',topo:'P2P bidirectional (unlike RFID)',use:'Payments, ticketing, smart phone pairing',
+   note:'Official NFC specs cite "a few cm" — <20 cm is too generous as default expectation',isErr:true},
+  {id:'ble',name:'Bluetooth LE (Bluetooth SIG)',type:'standard',cat:'short',range_km:0.1,latency_max:3,devices_max:3,datarate_min:0,battery:5,mobile:true,noop:true,private:true,outdoor:false,licensed:false,
+   range_s:'10–100 m (500 m with amplifiers)',kpi:'≤ 2 Mbps (LE 2M PHY), GFSK FH-SS',kpi_class:'',spec:'2.4 GHz ISM, 40 channels 2 MHz',topo:'Star / mesh via BLE Mesh ext.',use:'Wearables, beacons, asset tracking, medical',
+   note:'Bluetooth LE evolves through Bluetooth SIG — the 802.15.1 label is misleading for modern versions'},
+  {id:'zigbee',name:'ZigBee (IEEE 802.15.4)',type:'ecosystem',cat:'short',range_km:0.1,latency_max:3,devices_max:4,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:false,licensed:false,
+   range_s:'10–100 m per hop',kpi:'250 kbps, O-QPSK DSSS',kpi_class:'',spec:'2.4 GHz ISM, slotted/unslotted CSMA/CA',topo:'Star / tree / mesh (coordinator + routers)',use:'Smart home, IIoT sensors, smart agriculture',
+   note:''},
+  {id:'thread',name:'Thread (IEEE 802.15.4 PHY)',type:'ecosystem',cat:'short',range_km:0.03,latency_max:3,devices_max:3,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:false,licensed:false,
+   range_s:'Self-healing IPv6 mesh (single hop ~30 m)',kpi:'250 kbps, IPv6-native, self-healing mesh',kpi_class:'kpi-defining',spec:'2.4 GHz ISM, O-QPSK DSSS',topo:'Mesh: Leader / Router / End Device roles',use:'Matter smart home (Google, Apple, Amazon)',
+   note:'Range shown is single hop — mesh extends coverage; the key property is IP-native resilient mesh, not hop distance'},
+  {id:'zwave',name:'Z-Wave',type:'ecosystem',cat:'short',range_km:0.1,latency_max:3,devices_max:3,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:false,licensed:false,
+   range_s:'~100 m per hop',kpi:'9.6–100 kbps, FSK/GFSK',kpi_class:'',spec:'Sub-GHz 868/908 MHz, 200 kHz BW',topo:'Mesh, up to 232 nodes',use:'Home automation, certified vendor interop',
+   note:''},
+  {id:'6lowpan',name:'6LoWPAN (IETF RFC 4944)',type:'framework',cat:'short',range_km:0.1,latency_max:3,devices_max:4,datarate_min:0,battery:4,mobile:false,noop:true,private:true,outdoor:false,licensed:false,
+   range_s:'Depends on underlying 802.15.4 PHY',kpi:'IPv6 adaptation layer over 802.15.4',kpi_class:'kpi-defining',spec:'Sub-GHz or 2.4 GHz (PHY-dependent)',topo:'Mesh IPv6 WSN',use:'Wireless sensor networks, IoT IPv6 integration',
+   note:'Framework/adaptation layer, not a PHY — always deployed on top of another radio'},
+  {id:'ant',name:'ANT / ANT+',type:'ecosystem',cat:'short',range_km:0.03,latency_max:3,devices_max:2,datarate_min:0,battery:5,mobile:true,noop:true,private:true,outdoor:false,licensed:false,
+   range_s:'~30 m',kpi:'1 Mbps, GFSK',kpi_class:'',spec:'2.4 GHz ISM',topo:'Star / mesh',use:'Sports, fitness, healthcare wearables',
+   note:''},
+  {id:'enocean',name:'EnOcean',type:'standard',cat:'short',range_km:0.03,latency_max:3,devices_max:2,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:false,licensed:false,
+   range_s:'~30 m indoor',kpi:'Energy harvesting — zero battery operation',kpi_class:'kpi-defining',spec:'868 MHz sub-GHz, ASK/FSK',topo:'Point-to-point, star, mesh via repeaters',use:'Batteryless switches, green buildings',
+   note:'Topology corrected: P2P and star are primary modes; mesh possible via repeaters, not native'},
+  {id:'wirelesshart',name:'WirelessHART (IEC 62591)',type:'standard',cat:'short',range_km:0.1,latency_max:3,devices_max:3,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'~100 m',kpi:'250 kbps, O-QPSK DSSS, time-slotted',kpi_class:'',spec:'2.4 GHz ISM',topo:'Self-organizing mesh',use:'Process industry automation, plant sensors',
+   note:''},
+  {id:'uwb',name:'UWB (IEEE 802.15.4z)',type:'standard',cat:'short',range_km:0.05,latency_max:3,devices_max:2,datarate_min:1,battery:4,mobile:true,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'~50 m',kpi:'Sub-10 cm positioning accuracy',kpi_class:'kpi-defining',spec:'3.1–10.6 GHz, pulse-based',topo:'P2P / star',use:'Indoor positioning, port/factory RTLS, Apple/Samsung integration',
+   note:'New — not in course slides. Key technology for port logistics (Kalmar use case) and precision positioning',isNew:true},
+  {id:'wigig',name:'WiGig (IEEE 802.11ad/ay)',type:'standard',cat:'short',range_km:0.01,latency_max:2,devices_max:1,datarate_min:3,battery:1,mobile:false,noop:true,private:true,outdoor:false,licensed:false,
+   range_s:'< 10 m LOS only',kpi:'7–40+ Gbps, directional beamforming',kpi_class:'',spec:'60 GHz ISM, OFDM',topo:'P2P directional',use:'Wireless VR/AR, wireless HDMI, short industrial links',
+   note:''},
+  // MEDIUM
+  {id:'dash7',name:'DASH7 (ISO 18000-7)',type:'standard',cat:'medium',range_km:2,latency_max:3,devices_max:3,datarate_min:0,battery:5,mobile:true,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'1–2 km',kpi:'27 kbps GFSK, wake-on-event MAC',kpi_class:'kpi-defining',spec:'433/868/915 MHz ISM',topo:'Star / tree, async no-beacon (BLAST stack)',use:'Low-latency logistics, door locks, food monitoring',
+   note:''},
+  {id:'wisun',name:'Wi-SUN (IEEE 802.15.4g)',type:'standard',cat:'medium',range_km:1,latency_max:3,devices_max:4,datarate_min:1,battery:3,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'~1 km per hop (multi-hop mesh)',kpi:'50 kbps–1 Mbps, utility-grade reliability',kpi_class:'',spec:'Sub-GHz 902–928 MHz ISM, BPSK/FSK/OFDM',topo:'Multi-hop IPv6 mesh, RPL routing',use:'Smart grid, utility metering, street lighting',
+   note:''},
+  {id:'rpma',name:'Ingenu RPMA',type:'vendor',cat:'medium',range_km:10,latency_max:3,devices_max:4,datarate_min:0,battery:3,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'5–15 km (outlier: uses 2.4 GHz)',kpi:'> 160 dB link budget, 1000+ devices/AP',kpi_class:'',spec:'2.4 GHz ISM, DSSS 1 MHz BW',topo:'Star, uplink-dominant ALOHA',use:'High-capacity M2M, urban sensors, oil/gas',
+   note:'Unusual: LPWAN-class range achieved at 2.4 GHz via high link budget — an architectural outlier'},
+  {id:'wn',name:'Weightless-N',type:'standard',cat:'medium',range_km:7,latency_max:4,devices_max:3,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'5–10 km',kpi:'0.1–1 kbps UNB, UL-only',kpi_class:'',spec:'0.89 GHz sub-GHz ISM',topo:'Star, one-way uplink',use:'Smart metering, rural environmental sensors',
+   note:''},
+  {id:'wp',name:'Weightless-P',type:'standard',cat:'medium',range_km:3,latency_max:3,devices_max:3,datarate_min:0,battery:4,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'2–5 km',kpi:'0.2–100 kbps, bidirectional',kpi_class:'',spec:'0.89 GHz sub-GHz ISM, FSK/QPSK',topo:'Star, FDMA/TDMA scheduled',use:'Two-way telemetry, gas/water meters',
+   note:''},
+  {id:'ww',name:'Weightless-W',type:'standard',cat:'medium',range_km:5,latency_max:3,devices_max:3,datarate_min:1,battery:3,mobile:false,noop:true,private:true,outdoor:true,licensed:true,
+   range_s:'5 km+',kpi:'Up to 10 Mbps, adaptive OFDM',kpi_class:'',spec:'TV white space 470–790 MHz (licensed by region)',topo:'Star, TDD',use:'Urban IoT, retail — TV white space spectrum',
+   note:'Spectrum is TV white space — licensed by region, not unlicensed ISM',isErr:true},
+  {id:'wirepas',name:'Wirepas Mesh',type:'vendor',cat:'medium',range_km:1,latency_max:3,devices_max:5,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'Building to campus (mesh extends)',kpi:'Fully decentralized — no central controller',kpi_class:'kpi-defining',spec:'2.4 GHz (BLE chips) or sub-GHz ISM',topo:'Fully decentralized self-healing mesh',use:'Smart metering at scale, IIoT, buildings — Finnish tech',
+   note:'New — mentioned briefly in optional slides only. 700k+ node deployments. Relevant for Finnish industry context',isNew:true},
+  // LPWAN
+  {id:'lora',name:'LoRa / LoRaWAN',type:'ecosystem',cat:'lpwan',range_km:10,latency_max:4,devices_max:5,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'2–15 km',kpi:'0.3–50 kbps, CSS SF7–SF12',kpi_class:'',spec:'433/868/915 MHz ISM',topo:'Star, ALOHA, 3 device classes (A/B/C)',use:'Agriculture, smart city, asset tracking, DIY private nets',
+   note:'LoRa = PHY (Semtech); LoRaWAN = MAC/network stack (LoRa Alliance) — distinct layers'},
+  {id:'nbfi',name:'NB-Fi (Wave IoT)',type:'vendor',cat:'lpwan',range_km:7,latency_max:4,devices_max:4,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'5–10 km',kpi:'50–100 bps UNB',kpi_class:'',spec:'Sub-GHz ISM',topo:'Star',use:'Industrial telemetry, remote sensors',
+   note:''},
+  {id:'telensa',name:'Telensa',type:'vendor',cat:'lpwan',range_km:5,latency_max:4,devices_max:3,datarate_min:0,battery:5,mobile:false,noop:true,private:false,outdoor:true,licensed:false,
+   range_s:'~5 km urban',kpi:'UNB, very low power',kpi_class:'',spec:'Sub-GHz ISM',topo:'Star',use:'Smart street lighting — UK-focused managed network',
+   note:''},
+  {id:'mioty',name:'MIoTy (MIOTY / IEC 63375)',type:'standard',cat:'lpwan',range_km:10,latency_max:4,devices_max:5,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'~10 km',kpi:'Telegram splitting — robust to interference',kpi_class:'kpi-defining',spec:'Sub-GHz ISM, UNB',topo:'Star',use:'IIoT Europe, Fraunhofer/ETSI standard, growing fast',
+   note:'New — not in course slides. Berg Insight tracks as emerging LPWA. Relevant for Wärtsilä/industrial Finland',isNew:true},
+  // WIFI
+  {id:'halow',name:'Wi-Fi HaLow (IEEE 802.11ah)',type:'standard',cat:'wifi',range_km:3,latency_max:3,devices_max:5,datarate_min:1,battery:4,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'1–3 km typical; 16 km LOS proven (2024–25)',kpi:'Thousands of devices per AP, OFDMA',kpi_class:'kpi-defining',spec:'Sub-GHz 868/915 MHz ISM',topo:'Star, Target Wake Time for battery',use:'IoT agriculture, industrial monitoring',
+   note:'Range corrected: slides say 1 km but 2024–25 commercial deployments demonstrate 1–3 km typical',isErr:true},
+  {id:'af',name:'Wi-Fi White-Fi (IEEE 802.11af)',type:'standard',cat:'wifi',range_km:10,latency_max:3,devices_max:3,datarate_min:2,battery:3,mobile:false,noop:true,private:true,outdoor:true,licensed:true,
+   range_s:'Several km',kpi:'≤ 567 Mbps, long-range via clean TV spectrum',kpi_class:'',spec:'TV white space 54–790 MHz (licensed by region)',topo:'Star',use:'Rural connectivity, environmental sensing',
+   note:''},
+  {id:'p80211p',name:'IEEE 802.11p (DSRC/V2X)',type:'standard',cat:'wifi',range_km:0.3,latency_max:2,devices_max:2,datarate_min:1,battery:2,mobile:true,noop:true,private:true,outdoor:true,licensed:true,
+   range_s:'~300 m LOS',kpi:'~27 Mbps, <10 ms latency for V2X',kpi_class:'',spec:'5.8–5.9 GHz licensed (ITS band)',topo:'Ad-hoc / V2X',use:'Vehicle-to-vehicle, vehicle-to-infrastructure',
+   note:''},
+  {id:'wifi5',name:'Wi-Fi 5 (IEEE 802.11ac)',type:'standard',cat:'wifi',range_km:0.03,latency_max:3,devices_max:2,datarate_min:2,battery:1,mobile:false,noop:true,private:true,outdoor:false,licensed:false,
+   range_s:'10–30 m indoor',kpi:'≤ 6.7 Gbps, 5 GHz OFDM',kpi_class:'',spec:'5 GHz U-NII bands (not ISM in strict sense)',topo:'Star',use:'Smart cameras, appliances, indoor robots',
+   note:'Spectrum note: 5 GHz belongs to U-NII band family — calling it "ISM" is imprecise for strict readers',isErr:true},
+  {id:'wifi6',name:'Wi-Fi 6/6E (IEEE 802.11ax)',type:'standard',cat:'wifi',range_km:0.03,latency_max:2,devices_max:3,datarate_min:2,battery:2,mobile:false,noop:true,private:true,outdoor:false,licensed:false,
+   range_s:'10–30 m indoor',kpi:'≤ 10 Gbps, OFDMA, TWT enables some battery IoT',kpi_class:'',spec:'2.4/5/6 GHz ISM',topo:'Star, MU-MIMO, BSS coloring',use:'Dense smart home, enterprise IIoT',
+   note:''},
+  {id:'wifi7',name:'Wi-Fi 7 (IEEE 802.11be)',type:'standard',cat:'wifi',range_km:0.03,latency_max:2,devices_max:3,datarate_min:3,battery:1,mobile:false,noop:true,private:true,outdoor:false,licensed:false,
+   range_s:'~30 m indoor',kpi:'≤ 46 Gbps, Multi-Link Operation (MLO)',kpi_class:'',spec:'2.4/5/6 GHz ISM',topo:'Star, MLO simultaneous bands',use:'AR/VR, robotics, real-time control IoT',
+   note:''},
+  // CELLULAR
+  {id:'ecgsm',name:'EC-GSM-IoT (3GPP R13)',type:'standard',cat:'cellular',range_km:15,latency_max:4,devices_max:5,datarate_min:0,battery:5,mobile:false,noop:false,private:false,outdoor:true,licensed:true,
+   range_s:'GSM cell-dependent (MCL 164 dB)',kpi:'MCL 164 dB, up to 50 000 devices/cell',kpi_class:'',spec:'GSM 850–1900 MHz licensed, GMSK/BPSK',topo:'Star, no handover, PSM + eDRX',use:'Legacy rural sensors where only GSM exists',
+   note:''},
+  {id:'nbiot',name:'NB-IoT / eNB-IoT (3GPP R13+)',type:'standard',cat:'cellular',range_km:10,latency_max:3,devices_max:5,datarate_min:0,battery:5,mobile:false,noop:false,private:false,outdoor:true,licensed:true,
+   range_s:'1–10 km (MCL 164 dB)',kpi:'MCL 164 dB; PSM + eDRX for 10-year battery',kpi_class:'kpi-defining',spec:'Licensed LTE bands, 180 kHz, OFDM DL/SC-FDMA UL',topo:'Star, PSM + eDRX, no native handover',use:'Smart metering, static sensors, agriculture',
+   note:''},
+  {id:'ltem',name:'LTE-M / eMTC (3GPP R13+)',type:'standard',cat:'cellular',range_km:10,latency_max:3,devices_max:4,datarate_min:1,battery:4,mobile:true,noop:false,private:false,outdoor:true,licensed:true,
+   range_s:'1–10 km (MCL 156 dB)',kpi:'MCL 156 dB; supports handover + VoLTE',kpi_class:'kpi-defining',spec:'Licensed LTE bands, 1.4 MHz, OFDM DL/SC-FDMA UL',topo:'Star, PSM + eDRX + handover',use:'Wearables, asset tracking, fleet management',
+   note:''},
+  {id:'ltecat1',name:'4G LTE Cat-1 / Cat-4',type:'standard',cat:'cellular',range_km:10,latency_max:3,devices_max:4,datarate_min:2,battery:2,mobile:true,noop:false,private:false,outdoor:true,licensed:true,
+   range_s:'1–10 km',kpi:'≤ 150 Mbps, widely deployed globally',kpi_class:'',spec:'Licensed LTE bands, OFDMA/SC-FDMA',topo:'Star',use:'Video IoT, mobile gateways, logistics',
+   note:'LTE Cat-1 growing fast as cost-effective mid-tier IoT option (IoT Analytics 2025)'},
+  {id:'5gmmtc',name:'5G NR mMTC (3GPP R15+)',type:'standard',cat:'cellular',range_km:5,latency_max:3,devices_max:5,datarate_min:0,battery:2,mobile:true,noop:false,private:false,outdoor:true,licensed:true,
+   range_s:'100 m – 5 km',kpi:'Defining KPI: 1 000 000 devices/km² (ITU IMT-2020)',kpi_class:'kpi-defining',spec:'Sub-6 GHz + mmWave licensed, OFDM flex. numerology',topo:'Star, grant-free access, NOMA',use:'Massive IoT density, smart city sensor scale',
+   note:'KPI corrected: connection density (1M/km²) is the defining mMTC metric, not peak data rate'},
+  {id:'5gurllc',name:'5G NR URLLC (3GPP R15+)',type:'standard',cat:'cellular',range_km:1,latency_max:0,devices_max:3,datarate_min:1,battery:1,mobile:true,noop:false,private:false,outdoor:true,licensed:true,
+   range_s:'Campus / local deployment',kpi:'Defining KPIs: ≤ 1 ms U-plane latency; 99.9999% reliability',kpi_class:'kpi-defining',spec:'Licensed sub-6 GHz, mini-slots, preemptive scheduling',topo:'Star',use:'Factory automation, autonomous vehicles, telemedicine',
+   note:'KPI corrected: latency + reliability are the defining URLLC metrics per ITU 3GPP TS 22.261'},
+  {id:'redcap',name:'5G RedCap (3GPP R17)',type:'standard',cat:'cellular',range_km:5,latency_max:3,devices_max:4,datarate_min:1,battery:3,mobile:true,noop:false,private:false,outdoor:true,licensed:true,
+   range_s:'Campus to wide area',kpi:'Reduced capability: ≤ 20 MHz BW, lower complexity/cost',kpi_class:'kpi-defining',spec:'Licensed sub-6 GHz, OFDM reduced BW',topo:'Star',use:'Mid-tier IoT: wearables, video surveillance, IIoT',
+   note:'KPI corrected: reduced device complexity is the defining RedCap property, not a specific throughput headline'},
+  {id:'p5g',name:'Private 5G (local 5G / CBRS)',type:'ecosystem',cat:'cellular',range_km:1,latency_max:1,devices_max:4,datarate_min:2,battery:2,mobile:true,noop:true,private:true,outdoor:true,licensed:true,
+   range_s:'Campus / site',kpi:'≤ 1 Gbps, no public operator dependency',kpi_class:'',spec:'Licensed / CBRS / local spectrum, massive MIMO',topo:'Star, enterprise-managed',use:'Port, factory campus — Kalmar/Wärtsilä type deployments',
+   note:''},
+  // NTN
+  {id:'nbiotntn',name:'NB-IoT via NTN (3GPP R17)',type:'standard',cat:'ntn',range_km:9999,latency_max:4,devices_max:3,datarate_min:0,battery:4,mobile:false,noop:false,private:false,outdoor:true,licensed:true,
+   range_s:'Global (LEO/GEO satellite)',kpi:'3GPP NB-IoT PHY over satellite — standardized R17',kpi_class:'kpi-defining',spec:'Licensed LEO/GEO, 3GPP NB-IoT frame structure',topo:'Star via satellite',use:'Remote, maritime, areas without terrestrial coverage',
+   note:'New in 3GPP R17 — not in course slides'},
+  {id:'satleo',name:'Iridium / Globalstar',type:'vendor',cat:'ntn',range_km:9999,latency_max:4,devices_max:2,datarate_min:0,battery:3,mobile:true,noop:false,private:false,outdoor:true,licensed:true,
+   range_s:'Global LEO',kpi:'1–10 kbps, global coverage guarantee',kpi_class:'',spec:'Licensed LEO bands, proprietary PHY',topo:'Star via satellite',use:'Remote sensors, maritime tracking, no-coverage areas',
+   note:''},
+  // INDUSTRIAL
+  {id:'isa100',name:'ISA100.11a (IEC 62734)',type:'standard',cat:'industrial',range_km:0.1,latency_max:3,devices_max:3,datarate_min:0,battery:5,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'~100 m per hop',kpi:'250 kbps, time-slotted mesh for process control',kpi_class:'',spec:'2.4 GHz ISM, O-QPSK DSSS',topo:'Mesh',use:'Oil, gas, chemical — IEC standard process automation',
+   note:''},
+  {id:'dect',name:'DECT-2020 NR (ETSI TS 103 636)',type:'standard',cat:'industrial',range_km:1,latency_max:2,devices_max:4,datarate_min:1,battery:4,mobile:false,noop:true,private:true,outdoor:true,licensed:false,
+   range_s:'~1 km',kpi:'≤ 10 Mbps, globally license-exempt 1.9 GHz',kpi_class:'',spec:'1.9 GHz unlicensed (globally),GFSK/OFDM',topo:'Mesh capable',use:'Industrial mesh, DECT evolution, ITU IMT-2020 candidate',
+   note:''},
+];
+
+// ── SCENARIOS ─────────────────────────────────────────────────────────────
+const SCENARIOS = [
+  {id:'factory',name:'Smart factory / port',icon:'🏭',latency:1,range:2,devices:4,datarate:1,budget:2,battery:false,noop:false,mobile:true,private:true,outdoor:true},
+  {id:'agri',name:'Smart agriculture',icon:'🌾',latency:4,range:4,devices:3,datarate:0,budget:0,battery:true,noop:true,mobile:false,private:true,outdoor:true},
+  {id:'building',name:'Smart building',icon:'🏢',latency:3,range:1,devices:3,datarate:0,budget:1,battery:true,noop:true,mobile:false,private:true,outdoor:false},
+  {id:'tracking',name:'Asset tracking',icon:'📦',latency:3,range:4,devices:3,datarate:0,budget:0,battery:true,noop:false,mobile:true,private:false,outdoor:true},
+  {id:'city',name:'Smart city / utilities',icon:'🏙️',latency:4,range:4,devices:5,datarate:0,budget:1,battery:true,noop:false,mobile:false,private:false,outdoor:true},
+  {id:'consumer',name:'Consumer / wearables',icon:'⌚',latency:3,range:0,devices:2,datarate:1,budget:0,battery:true,noop:true,mobile:true,private:false,outdoor:false},
+  {id:'remote',name:'Remote / rural sensing',icon:'📡',latency:4,range:5,devices:3,datarate:0,budget:0,battery:true,noop:true,mobile:false,private:true,outdoor:true},
+  {id:'custom',name:'Custom',icon:'⚙',latency:4,range:0,devices:0,datarate:0,budget:0,battery:false,noop:false,mobile:false,private:false,outdoor:false},
+];
+
+const LATENCY_LABELS = ['< 1 ms (URLLC)','1–10 ms','10–100 ms','100 ms – 1 s','best effort'];
+const RANGE_LABELS = ['any range','< 100 m','< 1 km','< 10 km','< 50 km','global'];
+const DEVICES_LABELS = ['any scale','< 10','10–100','100–1 000','1 000–100 000','massive (> 100k)'];
+const DATARATE_LABELS = ['any rate','> 10 kbps','> 1 Mbps','> 100 Mbps','> 1 Gbps'];
+const BUDGET_LABELS = ['any budget','mid / managed','enterprise capex'];
+
+const CAT_LABELS = {short:'Short <100m',medium:'Medium 100m–5km',lpwan:'LPWAN unlicensed',wifi:'Wi-Fi variants',cellular:'Cellular (3GPP)',ntn:'Satellite / NTN',industrial:'Industrial'};
+const TYPE_LABELS = {standard:'IEEE/3GPP/IETF standard',ecosystem:'Multi-vendor ecosystem',vendor:'Vendor / proprietary',framework:'Protocol framework'};
+const TYPE_CLASS = {standard:'type-standard',ecosystem:'type-ecosystem',vendor:'type-vendor',framework:'type-framework'};
+const CAT_CLASS = {short:'cat-short',medium:'cat-medium',lpwan:'cat-lpwan',wifi:'cat-wifi',cellular:'cat-cellular',ntn:'cat-ntn',industrial:'cat-industrial'};
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let state = {
+  latency:4, range:0, devices:0, datarate:0, budget:0,
+  battery:false, noop:false, mobile:false, private:false, outdoor:false,
+  catFilter:'all', scenario:'custom', compareIds: new Set()
+};
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+function init() {
+  // Scenario cards
+  const sg = document.getElementById('scenarios');
+  SCENARIOS.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'scenario-card' + (s.id === state.scenario ? ' active' : '');
+    d.dataset.id = s.id;
+    d.innerHTML = `<div class="icon">${s.icon}</div><div class="name">${s.name}</div>`;
+    d.onclick = () => applyScenario(s.id);
+    sg.appendChild(d);
+  });
+
+  // Sidebar category checkboxes
+  const sc = document.getElementById('sidebar-cats');
+  Object.entries(CAT_LABELS).forEach(([k,v]) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+    row.innerHTML = `<input type="checkbox" id="scat-${k}" checked onchange="toggleCat('${k}',this.checked)">
+      <label for="scat-${k}" style="font-size:12px;color:var(--text2);cursor:pointer">${v}</label>`;
+    sc.appendChild(row);
+  });
+
+  // Sliders
+  ['latency','range','devices','datarate','budget'].forEach(k => {
+    const el = document.getElementById('sl-'+k);
+    el.addEventListener('input', () => {
+      state[k] = +el.value;
+      state.scenario = 'custom';
+      updateScenarioHighlight();
+      updateDisplay();
+    });
+  });
+
+  updateDisplay();
+}
+
+function applyScenario(id) {
+  const s = SCENARIOS.find(x => x.id === id);
+  if (!s) return;
+  state.scenario = id;
+  state.latency = s.latency; state.range = s.range;
+  state.devices = s.devices; state.datarate = s.datarate;
+  state.budget = s.budget; state.battery = s.battery;
+  state.noop = s.noop; state.mobile = s.mobile;
+  state.private = s.private; state.outdoor = s.outdoor;
+  ['latency','range','devices','datarate','budget'].forEach(k => {
+    document.getElementById('sl-'+k).value = state[k];
+  });
+  ['battery','noop','mobile','private','outdoor'].forEach(k => {
+    const el = document.getElementById('tg-'+k);
+    el.classList.toggle('on', state[k]);
+  });
+  updateScenarioHighlight();
+  updateDisplay();
+}
+
+function toggleConstraint(k) {
+  state[k] = !state[k];
+  document.getElementById('tg-'+k).classList.toggle('on', state[k]);
+  state.scenario = 'custom';
+  updateScenarioHighlight();
+  updateDisplay();
+}
+
+function toggleCat(k, on) {
+  // handled via checkbox directly, just re-render
+  updateDisplay();
+}
+
+function updateScenarioHighlight() {
+  document.querySelectorAll('.scenario-card').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === state.scenario);
+  });
+}
+
+// ── FILTER LOGIC ──────────────────────────────────────────────────────────
+function passes(t) {
+  // latency: 0=<1ms, 1=1-10ms, 2=10-100ms, 3=100ms-1s, 4=best effort
+  if (state.latency < 4 && t.latency_max > state.latency) return false;
+  // range: 0=any,1=<100m,2=<1km,3=<10km,4=<50km,5=global
+  const rangeReq = [999,0.1,1,10,50,9999][state.range];
+  if (state.range > 0 && t.range_km < rangeReq && t.cat !== 'ntn') return false;
+  // devices: 0=any,1=<10,2=10-100,3=100-1k,4=1k-100k,5=massive
+  if (state.devices > 0 && t.devices_max < state.devices) return false;
+  // datarate: 0=any,1=>10kbps,2=>1Mbps,3=>100Mbps,4=>1Gbps
+  if (state.datarate > 0 && t.datarate_min < state.datarate) return false;
+  // battery
+  if (state.battery && t.battery < 3) return false;
+  // no operator
+  if (state.noop && !t.noop) return false;
+  // mobile
+  if (state.mobile && !t.mobile) return false;
+  // private
+  if (state.private && !t.private) return false;
+  // outdoor
+  if (state.outdoor && !t.outdoor) return false;
+  // cat filter
+  const catChecks = Array.from(document.querySelectorAll('[id^="scat-"]'))
+    .filter(c => !c.checked).map(c => c.id.replace('scat-',''));
+  if (catChecks.includes(t.cat)) return false;
+  return true;
+}
+
+function fitScore(t) {
+  let s = 0;
+  // latency match (closer = better)
+  if (state.latency === 0 && t.latency_max === 0) s += 2;
+  else if (t.latency_max >= state.latency) s += 1;
+  // range generosity
+  if (state.range > 0) {
+    const needed = [999,0.1,1,10,50,9999][state.range];
+    if (t.range_km >= needed * 2) s += 1;
+  }
+  // battery preference
+  if (state.battery && t.battery >= 4) s += 1;
+  // no-op preference
+  if (state.noop && t.noop) s += 1;
+  return Math.min(5, s + 1);
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function updateDisplay() {
+  // Update slider labels
+  document.getElementById('val-latency').textContent = LATENCY_LABELS[state.latency];
+  document.getElementById('val-range').textContent = RANGE_LABELS[state.range];
+  document.getElementById('val-devices').textContent = DEVICES_LABELS[state.devices];
+  document.getElementById('val-datarate').textContent = DATARATE_LABELS[state.datarate];
+  document.getElementById('val-budget').textContent = BUDGET_LABELS[state.budget];
+
+  const passing = TECHS.filter(passes);
+  document.getElementById('count').textContent = passing.length;
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  // Sort: passing first by fit score desc, then failing dimmed
+  const sorted = [
+    ...passing.sort((a,b) => fitScore(b) - fitScore(a)),
+    ...TECHS.filter(t => !passes(t))
+  ];
+
+  sorted.forEach(t => {
+    const ok = passes(t);
+    const score = ok ? fitScore(t) : 0;
+    const isSelected = state.compareIds.has(t.id);
+    const tr = document.createElement('tr');
+    tr.className = ok ? (isSelected ? 'highlighted' : '') : 'dimmed';
+
+    const stars = '★'.repeat(t.battery) + '☆'.repeat(5-t.battery);
+    const scoreDots = [1,2,3,4,5].map(i =>
+      `<span class="fit-dot${i <= score ? ' on' : ''}"></span>`).join('');
+
+    tr.innerHTML = `
+      <td class="check-col">
+        ${ok ? `<input type="checkbox" ${isSelected?'checked':''} onchange="toggleCompare('${t.id}',this.checked)">` : ''}
+      </td>
+      <td>
+        <div class="tech-name">${t.name}${t.isNew?'<span class="badge-new">new</span>':''}${t.isErr?'<span class="badge-err">corrected</span>':''}</div>
+        ${ok ? `<div style="display:flex;gap:3px;margin-top:4px;align-items:center">${scoreDots}<span class="fit-score-text">${score}/5 fit</span></div>` : ''}
+      </td>
+      <td><span class="type-tag ${TYPE_CLASS[t.type]}">${t.type}</span></td>
+      <td><span class="cat-tag ${CAT_CLASS[t.cat]}">${CAT_LABELS[t.cat]}</span></td>
+      <td style="font-size:11px;color:var(--text2)">${t.range_s}</td>
+      <td><span class="kpi ${t.kpi_class}">${t.kpi}</span></td>
+      <td style="font-size:11px;color:var(--text2)">${t.spec}</td>
+      <td><span class="stars">${stars}</span></td>
+      <td style="font-size:11px;color:var(--text2)">${t.topo}</td>
+      <td style="font-size:12px">${t.use}${t.note?`<div class="note ${t.isErr?'warn':''}">${t.note}</div>`:''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  updateCompareBar();
+}
+
+// ── COMPARE ───────────────────────────────────────────────────────────────
+function toggleCompare(id, on) {
+  if (on) {
+    if (state.compareIds.size >= 4) {
+      alert('Maximum 4 technologies to compare at once.');
+      event.target.checked = false;
+      return;
+    }
+    state.compareIds.add(id);
+  } else {
+    state.compareIds.delete(id);
+  }
+  updateDisplay();
+}
+
+function updateCompareBar() {
+  const bar = document.getElementById('compare-bar');
+  const chips = document.getElementById('compare-chips');
+  const btn = document.getElementById('compare-btn');
+  if (state.compareIds.size === 0) { bar.classList.remove('visible'); return; }
+  bar.classList.add('visible');
+  chips.innerHTML = '';
+  state.compareIds.forEach(id => {
+    const t = TECHS.find(x => x.id === id);
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `${t.name}<span class="chip-x" onclick="toggleCompare('${id}',false);document.querySelector('[onchange*=\\'${id}\\']').checked=false">×</span>`;
+    chips.appendChild(chip);
+  });
+  btn.disabled = state.compareIds.size < 2;
+  btn.textContent = state.compareIds.size >= 2 ? `Compare ${state.compareIds.size} →` : 'Select 2+';
+}
+
+function runCompare() {
+  const selected = Array.from(state.compareIds).map(id => TECHS.find(t => t.id === id));
+  const panel = document.getElementById('compare-panel');
+  const grid = document.getElementById('compare-grid');
+  const elimDiv = document.getElementById('eliminations');
+  panel.classList.add('visible');
+
+  // Find best fit
+  const scores = selected.map(t => ({t, score: passes(t) ? fitScore(t) : 0}));
+  const best = scores.reduce((a,b) => b.score > a.score ? b : a).t;
+
+  // Compare fields
+  const fields = [
+    {label:'Type',key: t => `<span class="type-tag ${TYPE_CLASS[t.type]}">${t.type}</span>`},
+    {label:'Category',key: t => `<span class="cat-tag ${CAT_CLASS[t.cat]}">${CAT_LABELS[t.cat]}</span>`},
+    {label:'Range',key: t => t.range_s},
+    {label:'Key KPI',key: t => `<span class="${t.kpi_class}">${t.kpi}</span>`},
+    {label:'Spectrum',key: t => t.spec},
+    {label:'Battery life',key: t => `<span class="stars">${'★'.repeat(t.battery)+'☆'.repeat(5-t.battery)}</span>`},
+    {label:'Topology',key: t => t.topo},
+    {label:'Primary use',key: t => t.use},
+    {label:'Fit score',key: t => {
+      const s = passes(t) ? fitScore(t) : 0;
+      const dots = [1,2,3,4,5].map(i=>`<span class="fit-dot${i<=s?' on':''}"></span>`).join('');
+      return `<div class="fit-bar">${dots}<span class="fit-score-text">${s}/5</span></div>`;
+    }},
+  ];
+
+  grid.style.gridTemplateColumns = `repeat(${selected.length},1fr)`;
+  grid.innerHTML = selected.map(t => {
+    const isBest = t === best && passes(t);
+    return `<div class="compare-card${isBest?' best':''}">
+      <div class="compare-card-header">
+        <div class="compare-card-name">${t.name}</div>
+        ${isBest ? '<span class="best-badge">best fit</span>' : ''}
+      </div>
+      <div class="compare-rows">
+        ${fields.map(f => `<div class="compare-row">
+          <span class="compare-row-label">${f.label}</span>
+          <span class="compare-row-val">${f.key(t)}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Eliminations
+  const failing = selected.filter(t => !passes(t));
+  if (failing.length > 0) {
+    elimDiv.style.display = 'block';
+    const reasons = failing.map(t => {
+      const why = [];
+      if (state.latency < 4 && t.latency_max > state.latency) why.push(`latency requirement (need ${LATENCY_LABELS[state.latency]})`);
+      if (state.battery && t.battery < 3) why.push('battery constraint');
+      if (state.noop && !t.noop) why.push('requires cellular operator');
+      if (state.mobile && !t.mobile) why.push('no mobility/handover support');
+      if (state.private && !t.private) why.push('not deployable privately');
+      return `<div class="elim-item">${t.name}: eliminated by ${why.join(', ') || 'current requirements'}</div>`;
+    }).join('');
+    elimDiv.innerHTML = `<strong>ELIMINATED BY CURRENT REQUIREMENTS</strong>${reasons}`;
+  } else {
+    elimDiv.style.display = 'none';
+  }
+
+  panel.scrollIntoView({behavior:'smooth', block:'start'});
+}
+</script>
+<script>init();</script>
+</body>
+</html>
