@@ -15,7 +15,7 @@ The tool covers the full landscape: short-range (BLE, ZigBee, Thread, UWB, Wirel
 
 1. Pick a scenario preset (smart factory, agriculture, asset tracking, etc.) or set sliders manually
 2. Toggle hard constraints: battery-powered, no cellular operator, mobile devices, private deployment
-3. The table filters and ranks technologies in real time — green fit-score dots show how well each matches
+3. The table filters and ranks technologies in real time. Green fit-score dots show how well each matches
 4. Check 2–4 technologies and click **Compare** for a side-by-side breakdown with elimination reasoning
 
 ---
