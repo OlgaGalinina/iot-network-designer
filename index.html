@@ -639,7 +639,7 @@ const SCENARIOS = [
 
 const LATENCY_LABELS = ['< 1 ms (URLLC)','1–10 ms','10–100 ms','100 ms – 1 s','best effort'];
 const RANGE_LABELS = ['any range','< 100 m','< 1 km','< 10 km','< 50 km','global'];
-const DEVICES_LABELS = ['any scale','< 10','10–100','100–1 000','1 000–100 000','massive (> 100k)'];
+const DEVICES_LABELS = ['any scale','< 10','10-100','100–1 000','1 000–100 000','massive (> 100k)'];
 const DATARATE_LABELS = ['any rate','> 10 kbps','> 1 Mbps','> 100 Mbps','> 1 Gbps'];
 const BUDGET_LABELS = ['any budget','mid / managed','enterprise capex'];
 
@@ -737,11 +737,13 @@ function passes(t) {
   if (state.latency < 4 && t.latency_max > state.latency) return false;
   // range: 0=any,1=<100m,2=<1km,3=<10km,4=<50km,5=global
   const rangeReq = [999,0.1,1,10,50,9999][state.range];
-  if (state.range > 0 && t.range_km < rangeReq && t.cat !== 'ntn') return false;
+  if (state.range > 0 && t.range_km > rangeReq && t.cat !== 'ntn') return false;
   // devices: 0=any,1=<10,2=10-100,3=100-1k,4=1k-100k,5=massive
   if (state.devices > 0 && t.devices_max < state.devices) return false;
   // datarate: 0=any,1=>10kbps,2=>1Mbps,3=>100Mbps,4=>1Gbps
   if (state.datarate > 0 && t.datarate_min < state.datarate) return false;
+  // budget
+  if (state.budget > 0 && t.budget < state.budget) return false;
   // battery
   if (state.battery && t.battery < 3) return false;
   // no operator
@@ -767,7 +769,8 @@ function fitScore(t) {
   // range generosity
   if (state.range > 0) {
     const needed = [999,0.1,1,10,50,9999][state.range];
-    if (t.range_km >= needed * 2) s += 1;
+    const ratio = t.range_km / needed;
+    if (ratio >= 1 && ratio <= 2) s += 1;   // good match
   }
   // battery preference
   if (state.battery && t.battery >= 4) s += 1;
