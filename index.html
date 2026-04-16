@@ -97,6 +97,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 .tech-table tr:hover td{background:var(--bg3);}
 .tech-table tr.dimmed td{opacity:.28;}
 .tech-table tr.highlighted td{background:#0e1f17;}
+.bucket-row td{padding:7px 8px;background:var(--bg2);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);opacity:1!important;}
+.bucket-row:hover td{background:var(--bg2)!important;}
+.bucket-label{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;}
+.bucket-badge{padding:2px 7px;border-radius:10px;font-size:9px;font-weight:500;}
+.bucket-fit .bucket-badge{background:#0a1f14;color:var(--accent);}
+.bucket-caveat .bucket-badge{background:#221807;color:var(--warn);}
+.bucket-poor .bucket-badge{background:#241016;color:var(--danger);}
+.bucket-help{color:var(--text3);font-family:'IBM Plex Sans',sans-serif;font-size:10px;text-transform:none;letter-spacing:0;}
 .tech-name{font-weight:500;font-size:12px;color:var(--text);}
 .type-tag{font-size:10px;padding:2px 6px;border-radius:10px;font-weight:500;white-space:nowrap;}
 .type-standard{background:var(--tag-std);color:var(--tag-std-t);}
@@ -120,6 +128,15 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
 .fit-dot{width:9px;height:9px;border-radius:50%;background:var(--border2);}
 .fit-dot.on{background:var(--accent);}
 .fit-score-text{margin-left:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);}
+.bucket-mini{display:inline-block;margin-left:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text3);}
+.reason-line{font-size:10px;color:var(--text3);margin-top:3px;line-height:1.35;}
+.reason-line.caveat{color:var(--warn);}
+.reason-line.poor{color:var(--danger);}
+.reasoning-notes{margin-top:18px;border-top:1px solid var(--border);padding-top:14px;}
+.reasoning-note{padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;}
+.reasoning-note:last-child{border-bottom:none;}
+.reasoning-note-name{font-weight:500;color:var(--text2);}
+.reasoning-note-text{color:var(--text3);font-size:10px;line-height:1.4;margin-top:2px;}
 
 .compare-panel{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:20px;margin-top:20px;display:none;}
 .compare-panel.visible{display:block;}
@@ -147,7 +164,7 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
 
 <header>
   <h1>IoT Network Designer</h1>
-  <span class="ver">v0.3</span>
+  <span class="ver">v1.0</span>
   <span class="header-note">IoT technology comparison for intuition-building. Not a substitute for detailed engineering analysis. </span>
   <div class="mode-toggle">
     <button class="mode-btn active" id="btn-designer" onclick="setMode('designer')">Designer</button>
@@ -182,6 +199,10 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
           <input type="range" id="sl-datarate" min="0" max="4" step="1" value="0">
         </div>
         <div class="slider-row">
+          <div class="slider-header"><span class="slider-label">Power / battery</span><span class="slider-val" id="val-batteryreq">any power</span></div>
+          <input type="range" id="sl-batteryreq" min="0" max="2" step="1" value="0">
+        </div>
+        <div class="slider-row">
           <div class="slider-header"><span class="slider-label">How to deploy?</span><span class="slider-val" id="val-deploy">anyone</span></div>
           <input type="range" id="sl-deploy" min="0" max="2" step="1" value="0">
         </div>
@@ -190,7 +211,6 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
     <div>
       <div class="section-label">Constraints</div>
       <div class="toggle-group">
-        <div class="toggle-row"><span class="toggle-label">Battery-powered</span><div class="toggle" id="tg-battery" onclick="toggleConstraint('battery')"></div></div>
         <div class="toggle-row"><span class="toggle-label">No cellular operator</span><div class="toggle" id="tg-noop" onclick="toggleConstraint('noop')"></div></div>
         <div class="toggle-row"><span class="toggle-label">Mobile / moving</span><div class="toggle" id="tg-mobile" onclick="toggleConstraint('mobile')"></div></div>
         <div class="toggle-row"><span class="toggle-label">Private / no cloud</span><div class="toggle" id="tg-private" onclick="toggleConstraint('private')"></div></div>
@@ -220,6 +240,10 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
     <div class="elim-table" id="elim-table" style="display:none;">
       <div class="elim-table-label">Eliminated</div>
       <div id="elim-rows"></div>
+    </div>
+    <div class="reasoning-notes" id="tech-reasoning" style="display:none;">
+      <div class="elim-table-label">Why downgraded</div>
+      <div id="tech-reasoning-rows"></div>
     </div>
   </div>
 
@@ -269,7 +293,7 @@ const TECHS = [
   {id:'zigbee',name:'ZigBee (IEEE 802.15.4)',type:'ecosystem',cat:'short',range_km:0.1,latency_max:3,devices_max:4,datarate_max:1,battery:5,mobile:false,noop:true,private:true,outdoor:false,licensed:false,deploy:0,
    range_s:'10-100 m per hop',kpi:'250 kbps, O-QPSK DSSS',spec:'2.4 GHz ISM, slotted/unslotted CSMA/CA',topo:'Star / tree / mesh',use:'Smart home, IIoT sensors, smart agriculture',note:''},
   {id:'thread',name:'Thread (IEEE 802.15.4 PHY)',type:'ecosystem',cat:'short',range_km:0.03,latency_max:3,devices_max:3,datarate_max:1,battery:5,mobile:false,noop:true,private:true,outdoor:false,licensed:false,deploy:0,
-   range_s:'Self-healing IPv6 mesh (single hop ~30 m)',kpi:'IPv6-native, self-healing mesh',spec:'2.4 GHz ISM, O-QPSK DSSS',topo:'Mesh: Leader / Router / End Device',use:'Matter smart home (Google, Apple, Amazon)',note:'Range is single hop — mesh extends coverage; key property is IP-native resilient mesh'},
+   range_s:'Self-healing IPv6 mesh (single hop ~30 m)',kpi:'IPv6-native, self-healing mesh',spec:'2.4 GHz ISM, O-QPSK DSSS',topo:'Mesh: Leader / Router / End Device',use:'Smart home and building IPv6 mesh',note:'Range is single hop — mesh extends coverage; key property is IP-native resilient mesh'},
   {id:'zwave',name:'Z-Wave',type:'ecosystem',cat:'short',range_km:0.1,latency_max:3,devices_max:3,datarate_max:1,battery:5,mobile:false,noop:true,private:true,outdoor:false,licensed:false,deploy:0,
    range_s:'~100 m per hop',kpi:'9.6-100 kbps, FSK/GFSK',spec:'Sub-GHz 868/908 MHz, 200 kHz BW',topo:'Mesh, up to 232 nodes',use:'Home automation, certified vendor interop',note:''},
   {id:'6lowpan',name:'6LoWPAN (IETF RFC 4944)',type:'framework',cat:'short',range_km:0.1,latency_max:3,devices_max:4,datarate_max:1,battery:4,mobile:false,noop:true,private:true,outdoor:false,licensed:false,deploy:0,
@@ -323,7 +347,7 @@ const TECHS = [
   {id:'ecgsm',name:'EC-GSM-IoT (3GPP R13)',type:'standard',cat:'cellular',range_km:15,latency_max:4,devices_max:5,datarate_max:1,battery:5,mobile:false,noop:false,private:false,outdoor:true,licensed:true,deploy:1,
    range_s:'GSM cell-dependent (MCL 164 dB)',kpi:'MCL 164 dB, up to 50 000 devices/cell sector',spec:'GSM 850-1900 MHz licensed, GMSK/BPSK',topo:'Star, no handover, PSM + eDRX',use:'Legacy rural sensors where only GSM exists',note:''},
   {id:'nbiot',name:'NB-IoT / eNB-IoT (3GPP R13+)',type:'standard',cat:'cellular',range_km:10,latency_max:3,devices_max:5,datarate_max:1,battery:5,mobile:false,noop:false,private:false,outdoor:true,licensed:true,deploy:1,
-   range_s:'1-10 km (MCL 164 dB)',kpi:'MCL 164 dB; PSM + eDRX for 10-year battery',spec:'Licensed LTE bands, 180 kHz, OFDM DL/SC-FDMA UL',topo:'Star, PSM + eDRX, no native handover',use:'Smart metering, static sensors, agriculture',note:''},
+   range_s:'1-10 km (MCL 164 dB)',kpi:'MCL 164 dB; PSM + eDRX for long-term battery profiles',spec:'Licensed LTE bands, 180 kHz, OFDM DL/SC-FDMA UL',topo:'Star, PSM + eDRX, no native handover',use:'Smart metering, static sensors, agriculture',note:''},
   {id:'ltem',name:'LTE-M / eMTC (3GPP R13+)',type:'standard',cat:'cellular',range_km:10,latency_max:3,devices_max:4,datarate_max:1,battery:4,mobile:true,noop:false,private:false,outdoor:true,licensed:true,deploy:1,
    range_s:'1-10 km (MCL 156 dB)',kpi:'MCL 156 dB; supports handover + VoLTE',spec:'Licensed LTE bands, 1.4 MHz, OFDM DL/SC-FDMA UL',topo:'Star, PSM + eDRX + handover',use:'Wearables, asset tracking, fleet management',note:''},
   {id:'ltecat1',name:'4G LTE Cat-1 / Cat-4',type:'standard',cat:'cellular',range_km:10,latency_max:3,devices_max:4,datarate_max:2,battery:2,mobile:true,noop:false,private:false,outdoor:true,licensed:true,deploy:1,
@@ -340,32 +364,158 @@ const TECHS = [
    range_s:'Global (LEO/GEO satellite)',kpi:'3GPP NB-IoT PHY over satellite, R17 standardized',spec:'Licensed LEO/GEO, 3GPP NB-IoT frame structure',topo:'Star via satellite',use:'Remote, maritime, no terrestrial coverage',note:''},
   {id:'satleo',name:'Iridium / Globalstar',type:'vendor',cat:'ntn',range_km:9999,latency_max:4,devices_max:2,datarate_max:0,battery:3,mobile:true,noop:false,private:false,outdoor:true,licensed:true,deploy:1,
    range_s:'Global LEO',kpi:'1-10 kbps, global coverage guarantee',spec:'Licensed LEO bands, proprietary PHY',topo:'Star via satellite',use:'Remote sensors, maritime tracking',note:''},
-  {id:'isa100',name:'ISA100.11a (IEC 62734)',type:'standard',cat:'industrial',range_km:0.1,latency_max:3,devices_max:3,datarate_max:1,battery:5,mobile:false,noop:true,private:true,outdoor:true,licensed:false,deploy:2,
+  {id:'isa100',name:'ISA100.11a (IEC 62734)',type:'standard',cat:'medium',range_km:0.1,latency_max:3,devices_max:3,datarate_max:1,battery:5,mobile:false,noop:true,private:true,outdoor:true,licensed:false,deploy:2,
    range_s:'~100 m per hop',kpi:'250 kbps, time-slotted mesh for process control',spec:'2.4 GHz ISM, O-QPSK DSSS',topo:'Mesh',use:'Oil, gas, chemical / IEC standard process automation',note:''},
-  {id:'dect',name:'DECT-2020 NR (ETSI TS 103 636)',type:'standard',cat:'industrial',range_km:1,latency_max:2,devices_max:4,datarate_max:2,battery:4,mobile:false,noop:true,private:true,outdoor:true,licensed:false,deploy:0,
+  {id:'dect',name:'DECT-2020 NR (ETSI TS 103 636)',type:'standard',cat:'medium',range_km:1,latency_max:2,devices_max:4,datarate_max:2,battery:4,mobile:false,noop:true,private:true,outdoor:true,licensed:false,deploy:0,
    range_s:'~1 km',kpi:'≤ 10 Mbps, globally license-exempt 1.9 GHz',spec:'1.9 GHz unlicensed, GFSK/OFDM',topo:'Mesh capable',use:'Industrial mesh, DECT evolution, ITU IMT-2020 candidate',note:''},
 ];
 
 const SCENARIOS = [
-  {id:'factory',name:'Smart factory / port',icon:'🏭',latency:1,range:2,devices:4,datarate:1,deploy:2,battery:false,noop:false,mobile:true,private:true,outdoor:true},
-  {id:'agri',name:'Smart agriculture',icon:'🌾',latency:4,range:3,devices:3,datarate:0,deploy:0,battery:true,noop:true,mobile:false,private:true,outdoor:true},
-  {id:'building',name:'Smart building',icon:'🏢',latency:3,range:1,devices:3,datarate:0,deploy:1,battery:true,noop:true,mobile:false,private:true,outdoor:false},
-  {id:'tracking',name:'Asset tracking',icon:'📦',latency:4,range:2,devices:3,datarate:0,deploy:0,battery:true,noop:false,mobile:false,private:false,outdoor:true},
-  {id:'city',name:'Smart city / utilities',icon:'🏙️',latency:4,range:3,devices:5,datarate:0,deploy:1,battery:true,noop:false,mobile:false,private:false,outdoor:true},
-  {id:'consumer',name:'Consumer / wearables',icon:'⌚',latency:3,range:0,devices:2,datarate:0,deploy:0,battery:true,noop:false,mobile:true,private:false,outdoor:false},
-  {id:'remote',name:'Remote / rural sensing',icon:'📡',latency:4,range:3,devices:3,datarate:0,deploy:0,battery:true,noop:false,mobile:false,private:false,outdoor:true},
-  {id:'custom',name:'Custom',icon:'⚙',latency:4,range:0,devices:0,datarate:0,deploy:0,battery:false,noop:false,mobile:false,private:false,outdoor:false},
+  {id:'factory',name:'Smart factory / port',icon:'🏭',latency:1,range:2,devices:4,datarate:1,deploy:2,battery_req:0,noop:false,mobile:true,private:true,outdoor:true},
+  {id:'agri',name:'Smart agriculture',icon:'🌾',latency:4,range:3,devices:3,datarate:0,deploy:0,battery_req:2,noop:true,mobile:false,private:true,outdoor:true},
+  {id:'building',name:'Smart building',icon:'🏢',latency:3,range:1,devices:3,datarate:0,deploy:1,battery_req:2,noop:true,mobile:false,private:true,outdoor:false},
+  {id:'tracking',name:'Asset tracking',icon:'📦',latency:4,range:2,devices:3,datarate:0,deploy:0,battery_req:1,noop:false,mobile:false,private:false,outdoor:true},
+  {id:'city',name:'Smart city / utilities',icon:'🏙️',latency:4,range:3,devices:5,datarate:0,deploy:1,battery_req:2,noop:false,mobile:false,private:false,outdoor:true},
+  {id:'consumer',name:'Consumer / wearables',icon:'⌚',latency:3,range:0,devices:2,datarate:0,deploy:0,battery_req:1,noop:false,mobile:true,private:false,outdoor:false},
+  {id:'remote',name:'Remote / rural sensing',icon:'📡',latency:4,range:3,devices:3,datarate:0,deploy:0,battery_req:2,noop:false,mobile:false,private:false,outdoor:true},
+  {id:'custom',name:'Custom',icon:'⚙',latency:4,range:0,devices:0,datarate:0,deploy:0,battery_req:0,noop:false,mobile:false,private:false,outdoor:false},
 ];
 
 const LATENCY_LABELS = ['max 1 ms (URLLC)','max 10 ms','max 100 ms','max 1 s','best effort'];
 const RANGE_LABELS   = ['any range','at least 100 m','at least 1 km','at least 10 km','at least 50 km','global'];
 const DEVICES_LABELS = ['any scale','at least 10','at least 100','at least 1 000','at least 10 000','massive (> 10k)'];
 const DATARATE_LABELS= ['any rate','at least 10 kbps','at least 1 Mbps','at least 100 Mbps','at least 1 Gbps'];
+const BATTERY_REQ_LABELS = ['any power','battery-powered ok','long-term battery'];
 const DEPLOY_LABELS  = ['anyone','needs operator SIM','needs specialist install'];
-const CAT_LABELS  = {short:'Short <100m',medium:'Medium 100m-5km',lpwan:'LPWAN unlicensed',wifi:'Wi-Fi variants',cellular:'Cellular (3GPP)',ntn:'Satellite / NTN',industrial:'Industrial'};
-const TYPE_LABELS = {standard:'IEEE/3GPP/IETF standard',ecosystem:'Multi-vendor ecosystem',vendor:'Vendor / proprietary',framework:'Protocol framework'};
-const TYPE_CLASS  = {standard:'type-standard',ecosystem:'type-ecosystem',vendor:'type-vendor',framework:'type-framework'};
-const CAT_CLASS   = {short:'cat-short',medium:'cat-medium',lpwan:'cat-lpwan',wifi:'cat-wifi',cellular:'cat-cellular',ntn:'cat-ntn',industrial:'cat-industrial'};
+const CAT_LABELS = {
+  short:    'Unlicensed IoT, Short <100m',
+  medium:   'Unlicensed IoT, Medium 100m–5km',
+  lpwan:    'Unlicensed IoT, Long range (LPWAN)',
+  wifi:     'Wi-Fi variants (not IoT-native)',
+  cellular: 'Cellular (3GPP)',
+  ntn:      'Satellite / NTN'
+};
+
+const TYPE_LABELS = {
+  standard:  'IEEE/3GPP/IETF standard',
+  ecosystem: 'Multi-vendor ecosystem',
+  vendor:    'Vendor / proprietary',
+  framework: 'Protocol framework'
+};
+
+const TYPE_CLASS = {
+  standard:  'type-standard',
+  ecosystem: 'type-ecosystem',
+  vendor:    'type-vendor',
+  framework: 'type-framework'
+};
+
+const CAT_CLASS = {
+  short:    'cat-short',
+  medium:   'cat-medium',
+  lpwan:    'cat-lpwan',
+  wifi:     'cat-wifi',
+  cellular: 'cat-cellular',
+  ntn:      'cat-ntn'
+};
+const BUCKETS = {
+  fit:{label:'Fit', help:'Strong match with no major conflict'},
+  caveat:{label:'Can be used with caveats', help:'Usable, but the design accepts compromises'},
+  poor:{label:'Poor fit', help:'Core requirement conflict or hard blocker'}
+};
+
+const REASONING = {
+  ble:{
+    strengths:['Very low power, commodity devices, and good phone/gateway ecosystem.'],
+    weaknesses:['Short practical range and modest throughput.'],
+    tradeoffs:'Bluetooth LE favors battery life, mobility, and low-cost endpoints by accepting short-range operation and modest data rates.',
+    caveats:{range:'Mesh or gateways can extend BLE deployments, but coverage planning matters more than with LPWAN.'}
+  },
+  zigbee:{
+    strengths:['Mature low-power mesh for building and sensor networks.'],
+    weaknesses:['Limited data rate and weak mobility model.'],
+    tradeoffs:'ZigBee trades throughput and mobility for sleepy-node battery life and resilient local mesh coverage.',
+    caveats:{mobile:'ZigBee meshes work best with mostly fixed nodes; moving assets can break routing assumptions.'}
+  },
+  thread:{
+    strengths:['IPv6-native low-power mesh with self-healing routing.'],
+    weaknesses:['Short single-hop range and primarily fixed-node assumptions.'],
+    tradeoffs:'Thread keeps low-power 802.15.4 behavior while adding IP-native mesh, but it remains a local-network technology.',
+    caveats:{range:'Thread can extend coverage by mesh hops, but each hop adds planning and capacity constraints.'}
+  },
+  lora:{
+    strengths:['Long range, low device power, and self-deployable unlicensed networks.'],
+    weaknesses:['Low throughput, loose latency, and ALOHA capacity limits.'],
+    tradeoffs:'LoRa supports long-term battery operation by accepting smaller payloads, lower throughput, and looser latency.',
+    caveats:{latency:'Downlink and confirmed messages are possible, but deterministic low latency is not the design center.', datarate:'Payloads should be small and infrequent.'}
+  },
+  mioty:{
+    strengths:['Long range, low power, and robust reception through telegram splitting.'],
+    weaknesses:['Low-rate ecosystem with less deployment familiarity than LoRaWAN.'],
+    tradeoffs:'MIoTy improves LPWAN robustness by splitting small messages, while keeping the same low-throughput sensing posture.',
+    caveats:{deploy:'It is self-deployable, but ecosystem maturity may matter in procurement and support.'}
+  },
+  halow:{
+    strengths:['Longer-range Wi-Fi family option with stronger data rate than LPWAN.'],
+    weaknesses:['Higher endpoint power and smaller ecosystem than classic Wi-Fi.'],
+    tradeoffs:'Wi-Fi HaLow offers Wi-Fi-style IP connectivity over sub-GHz range, but usually with more power and infrastructure than LPWAN sensors.',
+    caveats:{battery:'Target wake time helps rechargeable or managed devices, but long-term unattended sensing may still favor LPWAN.'}
+  },
+  nbiot:{
+    strengths:['Wide-area coverage, strong link budget, and long-term battery suitability for static sensors.'],
+    weaknesses:['Operator dependence, limited mobility, and modest throughput.'],
+    tradeoffs:'NB-IoT supports wide-area low-power sensing, but operator dependence makes it a poor fit when self-deployment is required.',
+    caveats:{mobile:'NB-IoT is best for mostly static endpoints; mobility points toward LTE-M or cellular broadband.'}
+  },
+  ltem:{
+    strengths:['Wide-area coverage with handover, mobility, and better latency than NB-IoT.'],
+    weaknesses:['Operator dependence and higher power than LPWAN.'],
+    tradeoffs:'LTE-M can run on battery-powered devices, but mobility and cellular overhead reduce battery life relative to static LPWAN sensing.',
+    caveats:{battery:'Power-save modes help, but moving or chatty devices are better thought of as rechargeable or managed-battery designs.'}
+  },
+  wifi6:{
+    strengths:['High throughput, local ownership, and dense indoor networking.'],
+    weaknesses:['Short practical range and higher power draw.'],
+    tradeoffs:'Wi-Fi 6 can operate on battery-powered devices, but its higher data rates and more active links usually mean more frequent charging than low-power IoT radios.',
+    caveats:{battery:'TWT helps selected IoT use cases, but long-term unattended sensing is not its sweet spot.'}
+  },
+  wifi7:{
+    strengths:['Very high throughput and low-latency local connectivity.'],
+    weaknesses:['Short range, high power, and infrastructure complexity.'],
+    tradeoffs:'Wi-Fi 7 optimizes local capacity and responsiveness by accepting higher activity, more frequent charging, and short-cell planning.',
+    caveats:{datarate:'It is compelling when the payload is rich; for tiny telemetry it is usually overbuilt.'}
+  },
+  dect:{
+    strengths:['Private industrial networking, license-exempt spectrum, and mesh-capable design.'],
+    weaknesses:['Less mature ecosystem than established Wi-Fi, LPWAN, or 3GPP options.'],
+    tradeoffs:'DECT-2020 NR supports private industrial networking, but ecosystem maturity and deployment assumptions are less favorable than more established options.',
+    caveats:{deploy:'Treat as promising for private industrial designs, with vendor and ecosystem checks up front.'}
+  },
+  p5g:{
+    strengths:['Private ownership, mobility, QoS, and high-capacity campus coverage.'],
+    weaknesses:['Specialist installation, spectrum/regulatory work, and higher device power.'],
+    tradeoffs:'Private 5G buys managed reliability and mobility by accepting infrastructure complexity and cellular-style planning.',
+    caveats:{deploy:'A strong fit for campuses and ports, but only when specialist deployment is acceptable.'}
+  },
+  redcap:{
+    strengths:['Mid-tier 5G IoT with mobility and more bandwidth than mMTC options.'],
+    weaknesses:['Operator/private-core dependence and moderate power.'],
+    tradeoffs:'5G RedCap sits between low-power sensors and full broadband 5G, trading simplicity for mobility and richer payloads.',
+    caveats:{battery:'Better than full 5G devices, but long-term unattended sensing still favors lower-power LPWAN-style radios.'}
+  },
+  wirelesshart:{
+    strengths:['Industrial mesh with time-slotted behavior and process automation heritage.'],
+    weaknesses:['Short range per hop and specialized industrial ecosystem.'],
+    tradeoffs:'WirelessHART favors predictable plant telemetry and robust mesh operation over high throughput or open-ended mobility.',
+    caveats:{deploy:'Best when the site already accepts industrial instrumentation practices.'}
+  },
+  uwb:{
+    strengths:['Precise ranging and low-latency local positioning.'],
+    weaknesses:['Short range, lower scale, and positioning-specific infrastructure.'],
+    tradeoffs:'UWB is excellent when location accuracy is the payload, but it gives up LPWAN-style range and massive sensor scale.',
+    caveats:{range:'Use anchors and local coverage cells; do not expect wide-area reach.'}
+  }
+};
 
 const BLOCKS = [
   {id:'subghz',    layer:'phy',  label:'Sub-GHz PHY',
@@ -375,31 +525,31 @@ const BLOCKS = [
     required:  s => !s.noop && s.range >= 3,
     eliminated:s => s.noop},
   {id:'css',       layer:'phy',  label:'CSS',
-    required:  s => s.range >= 3 && s.battery && s.datarate === 0 && s.noop,
+    required:  s => s.range >= 3 && s.battery_req === 2 && s.datarate === 0 && s.noop,
     eliminated:s => s.datarate >= 2 || s.latency <= 1},
   {id:'unb',       layer:'phy',  label:'UNB',
-    required:  s => s.battery && s.datarate === 0 && s.range >= 3 && s.noop,
+    required:  s => s.battery_req === 2 && s.datarate === 0 && s.range >= 3 && s.noop,
     eliminated:s => s.datarate >= 1 || s.latency <= 2},
   {id:'dsss',      layer:'phy',  label:'DSSS',
     required:  s => false,
     eliminated:s => s.datarate >= 3},
   {id:'ofdm',      layer:'phy',  label:'OFDM / OFDMA',
     required:  s => s.datarate >= 2,
-    eliminated:s => s.battery && s.datarate === 0},
+    eliminated:s => s.battery_req === 2 && s.datarate === 0},
   {id:'pulse_uwb', layer:'phy',  label:'Pulse UWB',
     required:  s => false,
     eliminated:s => s.range >= 2},
   {id:'nb_phy',    layer:'phy',  label:'NB PHY',
-    required:  s => s.battery && s.range >= 3,
+    required:  s => s.battery_req === 2 && s.range >= 3,
     eliminated:s => s.datarate >= 2},
   {id:'mmwave',    layer:'phy',  label:'mmWave',
     required:  s => false,
     eliminated:s => s.range >= 2 || s.outdoor},
   {id:'aloha',     layer:'mac',  label:'ALOHA',
-    required:  s => s.latency === 4 && s.battery && s.devices >= 3 && s.noop,
+    required:  s => s.latency === 4 && s.battery_req === 2 && s.devices >= 3 && s.noop,
     eliminated:s => s.latency <= 2},
   {id:'csma',      layer:'mac',  label:'CSMA/CA',
-    required:  s => s.latency >= 2 && s.latency <= 3 && !s.battery,
+    required:  s => s.latency >= 2 && s.latency <= 3 && s.battery_req === 0,
     eliminated:s => s.latency <= 1 || s.devices >= 4},
   {id:'tdma',      layer:'mac',  label:'Slotted TDMA',
     required:  s => s.latency <= 2 && s.latency >= 1,
@@ -411,10 +561,10 @@ const BLOCKS = [
     required:  s => s.devices >= 4 && s.latency >= 3,
     eliminated:s => s.latency <= 1},
   {id:'psm',       layer:'mac',  label:'PSM',
-    required:  s => s.battery && !s.mobile,
+    required:  s => s.battery_req >= 1 && !s.mobile,
     eliminated:s => s.mobile || s.latency <= 1},
   {id:'edrx',      layer:'mac',  label:'eDRX',
-    required:  s => s.battery && !s.noop,
+    required:  s => s.battery_req >= 1 && !s.noop,
     eliminated:s => s.noop || s.latency <= 1},
   {id:'handover',  layer:'mac',  label:'Handover',
     required:  s => s.mobile && s.range >= 3,
@@ -443,7 +593,7 @@ function elimReason(id, s) {
   const m = {
     licensed_band:'no operator SIM', css: s.datarate>=2?'data rate > 1 Mbps':'latency < 10 ms',
     unb: s.datarate>=1?'data rate > 10 kbps':'latency < 100 ms', dsss:'data rate > 100 Mbps',
-    ofdm:'battery + low rate', pulse_uwb:'range > 1 km', nb_phy:'data rate > 1 Mbps',
+    ofdm:'long-term battery + low-rate sensing', pulse_uwb:'range > 1 km', nb_phy:'data rate > 1 Mbps',
     mmwave: s.range>=2?'range > 100 m':'outdoor constraint', aloha:'latency < 100 ms',
     csma: s.latency<=1?'latency < 10 ms':'scale > 10 000 devices', tdma:'best effort latency',
     ofdma_ul:'low scale + self-deploy', grant_free:'latency < 10 ms',
@@ -456,8 +606,8 @@ function elimReason(id, s) {
 }
 
 let state = {
-  latency:4, range:0, devices:0, datarate:0, deploy:0,
-  battery:false, noop:false, mobile:false, private:false, outdoor:false,
+  latency:4, range:0, devices:0, datarate:0, battery_req:0, deploy:0,
+  noop:false, mobile:false, private:false, outdoor:false,
   scenario:'custom', compareIds:new Set(), mode:'designer'
 };
 
@@ -481,9 +631,10 @@ function init() {
     sc.appendChild(row);
   });
 
-  ['latency','range','devices','datarate','deploy'].forEach(k => {
+  ['latency','range','devices','datarate','batteryreq','deploy'].forEach(k => {
     document.getElementById('sl-'+k).addEventListener('input', function() {
-      state[k] = +this.value;
+      const stateKey = k === 'batteryreq' ? 'battery_req' : k;
+      state[stateKey] = +this.value;
       state.scenario = 'custom';
       updateScenarioHighlight();
       updateDisplay();
@@ -512,7 +663,9 @@ function applyScenario(id) {
     state[k] = s[k];
     document.getElementById('sl-'+k).value = s[k];
   });
-  ['battery','noop','mobile','private','outdoor'].forEach(k => {
+  state.battery_req = s.battery_req;
+  document.getElementById('sl-batteryreq').value = s.battery_req;
+  ['noop','mobile','private','outdoor'].forEach(k => {
     state[k] = s[k];
     document.getElementById('tg-'+k).classList.toggle('on', s[k]);
   });
@@ -544,35 +697,161 @@ function setMode(m) {
   updateDisplay();
 }
 
-function passes(t) {
-  if (state.latency < 4 && t.latency_max > state.latency) return false;
-  const rangeReq = [0, 0.1, 1, 10, 50, 9999][state.range];
-  if (state.range > 0 && t.range_km < rangeReq && t.cat !== 'ntn') return false;
-  if (state.devices > 0 && t.devices_max < state.devices) return false;
-  if (state.datarate > 0 && t.datarate_max < state.datarate) return false;
-  if (state.deploy > 0 && t.deploy > state.deploy) return false;
-  if (state.battery && t.battery < 3) return false;
-  if (state.noop && !t.noop) return false;
-  if (state.mobile && !t.mobile) return false;
-  if (state.private && !t.private) return false;
-  if (state.outdoor && !t.outdoor) return false;
-  const hidden = Array.from(document.querySelectorAll('[id^="scat-"]'))
+function hiddenCats() {
+  return Array.from(document.querySelectorAll('[id^="scat-"]'))
     .filter(c => !c.checked).map(c => c.id.replace('scat-',''));
-  if (hidden.includes(t.cat)) return false;
-  return true;
+}
+
+function reasoningFor(t) {
+  return REASONING[t.id] || {
+    strengths:[t.use],
+    weaknesses:[t.note || 'Specialized fit depends on deployment details.'],
+    tradeoffs:`${t.name} can be useful in its primary niche, but the design should check range, power, and deployment assumptions.`
+  };
+}
+
+function batterySuitabilityText(t) {
+  if (t.battery >= 5) return `${t.name} supports long-term battery sensing when payloads and duty cycle stay modest.`;
+  if (t.battery >= 4) return `${t.name} has strong battery suitability, though active links, mobility, or payload size still shape runtime.`;
+  if (t.battery >= 3) return `${t.name} can support battery-powered devices, but the design should expect managed duty cycles or more frequent service than LPWAN-class radios.`;
+  if (t.battery >= 2) return `${t.name} can be used in rechargeable devices, but higher activity usually means more frequent charging than low-power IoT radios.`;
+  return `${t.name} is best with continuous power or very managed rechargeable designs because its energy use is high for IoT sensing.`;
+}
+
+function rangeGrade(t) {
+  if (t.cat === 'ntn') return 5;
+  const levels = [0,0.1,1,10,50,9999];
+  let grade = 0;
+  levels.forEach((km, i) => { if (t.range_km >= km) grade = i; });
+  return grade;
+}
+
+function batteryGrade(t) {
+  if (t.battery >= 4) return 2;
+  if (t.battery >= 2) return 1;
+  return 0;
+}
+
+function evaluateTech(t) {
+  const r = reasoningFor(t);
+  const hardFail = [];
+  const fitReasons = [];
+  const caveatReasons = [];
+  const poorReasons = [];
+  let score = 5;
+  let visible = true;
+
+  function addGradedMiss(required, actual, fitText, caveatText, poorText) {
+    const miss = required - actual;
+    if (miss <= 0) {
+      fitReasons.push(fitText);
+    } else if (miss === 1) {
+      caveatReasons.push(caveatText);
+      score -= 1;
+    } else {
+      poorReasons.push(poorText || caveatText);
+      score -= 2;
+    }
+  }
+
+  if (hiddenCats().includes(t.cat)) {
+    visible = false;
+    hardFail.push('Category hidden by the filter.');
+  }
+  if (state.noop && !t.noop) {
+    hardFail.push('Requires operator-managed access, which conflicts with no cellular operator.');
+  }
+  if (state.private && !t.private) {
+    hardFail.push('Cannot realistically satisfy a private / no-cloud deployment.');
+  }
+
+  if (state.latency < 4) addGradedMiss(
+    t.latency_max,
+    state.latency,
+    'Meets the requested latency class.',
+    (r.caveats && r.caveats.latency) || `${t.name} can be used, but its radio/MAC choices favor looser latency than this target.`,
+    (r.caveats && r.caveats.latency) || `${t.name} is more than one latency class away, so the design would be fighting the radio/MAC trade-off.`
+  );
+
+  if (state.range > 0) addGradedMiss(
+    state.range,
+    rangeGrade(t),
+    'Covers the requested distance class.',
+    (r.caveats && r.caveats.range) || `${t.name} may need denser gateways, mesh hops, or repeaters to reach the requested coverage.`,
+    (r.caveats && r.caveats.range) || `${t.name} is more than one coverage class short, so extra infrastructure would dominate the design.`
+  );
+
+  if (state.devices > 0) addGradedMiss(
+    state.devices,
+    t.devices_max,
+    'Matches the requested device scale.',
+    `${t.name} can work at smaller scale, but this requirement pushes beyond its comfortable density.`,
+    `${t.name} is more than one scale class short, so capacity planning would be a core conflict.`
+  );
+
+  if (state.datarate > 0) addGradedMiss(
+    state.datarate,
+    t.datarate_max,
+    'Supports the requested data-rate class.',
+    (r.caveats && r.caveats.datarate) || `${t.name} prioritizes range, power, or robustness over higher payload throughput.`,
+    (r.caveats && r.caveats.datarate) || `${t.name} is more than one data-rate class short, so payload expectations need a different radio family.`
+  );
+
+  if (state.deploy > 0) addGradedMiss(
+    t.deploy,
+    state.deploy,
+    'Deployment complexity is within the selected tolerance.',
+    (r.caveats && r.caveats.deploy) || `${t.name} may need more specialist planning or managed infrastructure than requested.`,
+    (r.caveats && r.caveats.deploy) || `${t.name} is more than one deployment-complexity class beyond the selected tolerance.`
+  );
+
+  if (state.battery_req > 0) addGradedMiss(
+    state.battery_req,
+    batteryGrade(t),
+    state.battery_req === 2 ? 'Strong match for long-term battery sensing.' : 'Well aligned with battery-powered endpoints.',
+    (r.caveats && r.caveats.battery) || batterySuitabilityText(t),
+    (r.caveats && r.caveats.battery) || batterySuitabilityText(t)
+  );
+
+  if (state.mobile) {
+    if (t.mobile) fitReasons.push('Supports moving devices or handover-style operation.');
+    else {
+      const msg = (r.caveats && r.caveats.mobile) || `${t.name} is strongest for fixed nodes; moving devices weaken routing, association, or coverage assumptions.`;
+      if (state.range >= 3) { poorReasons.push(msg); score -= 2; }
+      else { caveatReasons.push(msg); score -= 1; }
+    }
+  }
+
+  if (state.outdoor) {
+    if (t.outdoor) fitReasons.push('Suitable for outdoor or harsher deployment assumptions.');
+    else {
+      caveatReasons.push(`${t.name} is mainly an indoor/local technology, so outdoor design needs enclosures, gateway placement, and link-margin checks.`);
+      score -= 1;
+    }
+  }
+
+  if (hardFail.length) score = 0;
+  score = Math.max(0, Math.min(5, score));
+
+  let bucket = 'fit';
+  if (hardFail.length || poorReasons.length || caveatReasons.length >= 2) bucket = 'poor';
+  else if (caveatReasons.length === 1) bucket = 'caveat';
+
+  return {
+    tech:t, visible, score, bucket, hardFail,
+    fitReasons, caveatReasons, poorReasons,
+    tradeoffText:r.tradeoffs,
+    unlockText:r.strengths && r.strengths[0] ? r.strengths[0] : t.use
+  };
+}
+
+function passes(t) {
+  const e = evaluateTech(t);
+  return e.visible && !e.hardFail.length && e.bucket !== 'poor';
 }
 
 function fitScore(t) {
-  let s = 0;
-  if (state.latency===0 && t.latency_max===0) s+=2;
-  else if (t.latency_max >= state.latency) s+=1;
-  if (state.range > 0) {
-    const needed = [0,0.1,1,10,50,9999][state.range];
-    if (t.range_km >= needed && t.range_km <= needed*2) s+=1;
-  }
-  if (state.battery && t.battery >= 4) s+=1;
-  if (state.noop && t.noop) s+=1;
-  return Math.min(5, s+1);
+  return evaluateTech(t).score;
 }
 
 function updateBlocks() {
@@ -597,38 +876,80 @@ function updateBlocks() {
   ).join('');
 }
 
+function bucketHeaderRow(bucket, count) {
+  const b = BUCKETS[bucket];
+  return `<tr class="bucket-row bucket-${bucket}"><td colspan="10">
+    <div class="bucket-label"><span class="bucket-badge">${b.label}</span><span>${count}</span><span class="bucket-help">${b.help}</span></div>
+  </td></tr>`;
+}
+
+function compactReason(e) {
+  const reasons = e.hardFail.concat(e.poorReasons, e.caveatReasons);
+  if (reasons.length) return reasons[0];
+  return e.tradeoffText;
+}
+
+function reasonLine(e) {
+  const cls = e.bucket === 'poor' ? 'poor' : e.bucket === 'caveat' ? 'caveat' : '';
+  return `<div class="reason-line ${cls}">${compactReason(e)}</div>`;
+}
+
+function updateTechReasoning(evals) {
+  const wrap = document.getElementById('tech-reasoning');
+  const rows = document.getElementById('tech-reasoning-rows');
+  const notes = evals
+    .filter(e => e.visible && e.bucket !== 'fit')
+    .sort((a,b) => a.bucket === b.bucket ? b.score - a.score : (a.bucket === 'caveat' ? -1 : 1))
+    .slice(0, 6);
+  if (!notes.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  rows.innerHTML = notes.map(e => `<div class="reasoning-note">
+    <div class="reasoning-note-name">${e.tech.name} · ${BUCKETS[e.bucket].label}</div>
+    <div class="reasoning-note-text">${compactReason(e)} ${e.tradeoffText}</div>
+  </div>`).join('');
+}
+
 function updateDisplay() {
   document.getElementById('val-latency').textContent = LATENCY_LABELS[state.latency];
   document.getElementById('val-range').textContent   = RANGE_LABELS[state.range];
   document.getElementById('val-devices').textContent = DEVICES_LABELS[state.devices];
   document.getElementById('val-datarate').textContent= DATARATE_LABELS[state.datarate];
+  document.getElementById('val-batteryreq').textContent = BATTERY_REQ_LABELS[state.battery_req];
   document.getElementById('val-deploy').textContent  = DEPLOY_LABELS[state.deploy];
 
-  if (state.mode==='reasoning') updateBlocks();
-
-  const passing = TECHS.filter(passes);
-  document.getElementById('count').textContent = passing.length;
-
-  const sorted = [
-    ...passing.sort((a,b) => fitScore(b)-fitScore(a)),
-    ...TECHS.filter(t => !passes(t))
-  ];
+  const evals = TECHS.map(evaluateTech);
+  if (state.mode==='reasoning') {
+    updateBlocks();
+    updateTechReasoning(evals);
+  }
 
   const isReasoning = state.mode==='reasoning';
+  const visible = evals.filter(e => e.visible);
+  if (!isReasoning) {
+    const comparableIds = new Set(visible.filter(e => e.bucket !== 'poor' && !e.hardFail.length).map(e => e.tech.id));
+    Array.from(state.compareIds).forEach(id => { if (!comparableIds.has(id)) state.compareIds.delete(id); });
+  }
+  document.getElementById('count').textContent = visible.length;
+
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
 
-  sorted.forEach(t => {
-    const ok = passes(t);
-    const score = ok ? fitScore(t) : 0;
+  ['fit','caveat','poor'].forEach(bucket => {
+    const group = visible.filter(e => e.bucket === bucket).sort((a,b) => b.score - a.score);
+    if (!group.length) return;
+    tbody.insertAdjacentHTML('beforeend', bucketHeaderRow(bucket, group.length));
+    group.forEach(e => {
+    const t = e.tech;
+    const ok = e.bucket !== 'poor' && !e.hardFail.length;
+    const score = e.score;
     const sel = state.compareIds.has(t.id);
     const tr = document.createElement('tr');
-    tr.className = ok ? (sel?'highlighted':'') : 'dimmed';
+    tr.className = (sel?'highlighted ':'') + (e.bucket === 'poor' ? 'dimmed' : '');
     const stars = '★'.repeat(t.battery)+'☆'.repeat(5-t.battery);
     const dots  = [1,2,3,4,5].map(i=>`<span class="fit-dot${i<=score?' on':''}"></span>`).join('');
     tr.innerHTML = `
       <td class="check-col">${ok&&!isReasoning?`<input type="checkbox" ${sel?'checked':''} onchange="toggleCompare('${t.id}',this.checked)">`:''}</td>
-      <td><div class="tech-name">${t.name}</div>${ok?`<div class="fit-bar">${dots}<span class="fit-score-text">${score}/5</span></div>`:''}</td>
+      <td><div class="tech-name">${t.name}<span class="bucket-mini">${BUCKETS[e.bucket].label}</span></div><div class="fit-bar">${dots}<span class="fit-score-text">${score}/5</span></div>${reasonLine(e)}</td>
       <td class="hide-reasoning"><span class="type-tag ${TYPE_CLASS[t.type]}">${t.type}</span></td>
       <td><span class="cat-tag ${CAT_CLASS[t.cat]}">${CAT_LABELS[t.cat]}</span></td>
       <td class="hide-reasoning" style="font-size:11px;color:var(--text2)">${t.range_s}</td>
@@ -638,6 +959,7 @@ function updateDisplay() {
       <td class="hide-reasoning" style="font-size:11px;color:var(--text2)">${t.topo}</td>
       <td style="font-size:11px">${t.use}${t.note?`<div class="note">${t.note}</div>`:''}</td>`;
     tbody.appendChild(tr);
+    });
   });
 
   if (!isReasoning) updateCompareBar();
@@ -670,43 +992,40 @@ function updateCompareBar() {
 }
 
 function runCompare() {
-  const selected = Array.from(state.compareIds).map(id => TECHS.find(t => t.id===id));
+  const selected = Array.from(state.compareIds).map(id => evaluateTech(TECHS.find(t => t.id===id)));
   const panel = document.getElementById('compare-panel');
   const grid  = document.getElementById('compare-grid');
   const elimDiv = document.getElementById('eliminations');
   panel.classList.add('visible');
-  const best = selected.reduce((a,b) => (passes(b)?fitScore(b):0)>(passes(a)?fitScore(a):0)?b:a);
+  const best = selected.reduce((a,b) => b.score > a.score ? b : a);
   const fields = [
-    {label:'Type',     fn:t=>`<span class="type-tag ${TYPE_CLASS[t.type]}">${t.type}</span>`},
-    {label:'Category', fn:t=>`<span class="cat-tag ${CAT_CLASS[t.cat]}">${CAT_LABELS[t.cat]}</span>`},
-    {label:'Range',    fn:t=>t.range_s},
-    {label:'Key KPI',  fn:t=>t.kpi},
-    {label:'Spectrum', fn:t=>t.spec},
-    {label:'Battery',  fn:t=>`<span class="stars">${'★'.repeat(t.battery)+'☆'.repeat(5-t.battery)}</span>`},
-    {label:'Topology', fn:t=>t.topo},
-    {label:'Use',      fn:t=>t.use},
-    {label:'Fit',      fn:t=>{const s=passes(t)?fitScore(t):0;const d=[1,2,3,4,5].map(i=>`<span class="fit-dot${i<=s?' on':''}"></span>`).join('');return`<div class="fit-bar">${d}<span class="fit-score-text">${s}/5</span></div>`;}},
+    {label:'Type',     fn:e=>`<span class="type-tag ${TYPE_CLASS[e.tech.type]}">${e.tech.type}</span>`},
+    {label:'Category', fn:e=>`<span class="cat-tag ${CAT_CLASS[e.tech.cat]}">${CAT_LABELS[e.tech.cat]}</span>`},
+    {label:'Range',    fn:e=>e.tech.range_s},
+    {label:'Key KPI',  fn:e=>e.tech.kpi},
+    {label:'Spectrum', fn:e=>e.tech.spec},
+    {label:'Battery',  fn:e=>`<span class="stars">${'★'.repeat(e.tech.battery)+'☆'.repeat(5-e.tech.battery)}</span>`},
+    {label:'Topology', fn:e=>e.tech.topo},
+    {label:'Use',      fn:e=>e.tech.use},
+    {label:'Bucket',   fn:e=>BUCKETS[e.bucket].label},
+    {label:'Fit',      fn:e=>{const d=[1,2,3,4,5].map(i=>`<span class="fit-dot${i<=e.score?' on':''}"></span>`).join('');return`<div class="fit-bar">${d}<span class="fit-score-text">${e.score}/5</span></div>`;}},
+    {label:'Reason',   fn:e=>compactReason(e)},
+    {label:'Trade-off',fn:e=>e.tradeoffText},
   ];
   grid.style.gridTemplateColumns = `repeat(${selected.length},1fr)`;
-  grid.innerHTML = selected.map(t => {
-    const isBest = t===best && passes(t);
+  grid.innerHTML = selected.map(e => {
+    const t = e.tech;
+    const isBest = e===best && e.bucket !== 'poor';
     return `<div class="compare-card${isBest?' best':''}">
       <div class="compare-card-header"><div class="compare-card-name">${t.name}</div>${isBest?'<span class="best-badge">best fit</span>':''}</div>
-      <div class="compare-rows">${fields.map(f=>`<div class="compare-row"><span class="compare-row-label">${f.label}</span><span class="compare-row-val">${f.fn(t)}</span></div>`).join('')}</div>
+      <div class="compare-rows">${fields.map(f=>`<div class="compare-row"><span class="compare-row-label">${f.label}</span><span class="compare-row-val">${f.fn(e)}</span></div>`).join('')}</div>
     </div>`;
   }).join('');
-  const failing = selected.filter(t => !passes(t));
-  if (failing.length > 0) {
+  const downgraded = selected.filter(e => e.bucket !== 'fit');
+  if (downgraded.length > 0) {
     elimDiv.style.display = 'block';
-    elimDiv.innerHTML = `<strong>ELIMINATED</strong>` + failing.map(t => {
-      const why = [];
-      if (state.latency<4 && t.latency_max>state.latency) why.push(`latency ${LATENCY_LABELS[state.latency]}`);
-      if (state.battery && t.battery<3) why.push('battery');
-      if (state.noop && !t.noop) why.push('no operator');
-      if (state.mobile && !t.mobile) why.push('no handover');
-      if (state.private && !t.private) why.push('private network');
-      if (state.deploy>0 && t.deploy>state.deploy) why.push('deploy complexity');
-      return `<div class="elim-item">${t.name}: ${why.join(' · ')||'current requirements'}</div>`;
+    elimDiv.innerHTML = `<strong>DOWNGRADED OR EXCLUDED</strong>` + downgraded.map(e => {
+      return `<div class="elim-item">${e.tech.name}: ${compactReason(e)}</div>`;
     }).join('');
   } else { elimDiv.style.display='none'; }
   panel.scrollIntoView({behavior:'smooth',block:'start'});
