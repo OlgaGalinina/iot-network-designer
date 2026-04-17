@@ -1,6 +1,6 @@
 # IoT Network Designer
 
-An interactive IoT radio/network technology comparison tool designed based on the materials of our MSc/PhD course on Wireless IoT (Tampere University, finland).
+An interactive IoT radio/network technology comparison tool designed based on the materials of our MSc/PhD course on Wireless IoT (Tampere University, Finland).
 
 This project is a learning and intuition-building aid for comparing wireless IoT technologies. It helps users reason about trade-offs between latency, range, scale, data rate, power, deployment complexity, and mobility.
 
